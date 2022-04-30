@@ -10,13 +10,15 @@ CWD = os.path.dirname(os.path.abspath(__file__))
 
 
 class PGMCompiler:
-    def __init__(self,
-                 filename: str,
-                 ind_rif: float,
-                 angle: float = 0.0,
-                 long_pause: float = 0.25,
-                 short_pause: float = 0.15,
-                 output_digits: int = 6):
+    def __init__(
+        self,
+        filename: str,
+        ind_rif: float,
+        angle: float = 0.0,
+        long_pause: float = 0.25,
+        short_pause: float = 0.15,
+        output_digits: int = 6,
+    ):
 
         self.filename = filename
         self.long_pause = long_pause
@@ -25,8 +27,10 @@ class PGMCompiler:
         self.ind_rif = ind_rif
         self.angle = radians(angle % 360)
         if angle != 0:
-            print('\n***\n\nBEWARE ANGLES MUST BE IN DEGREE!!\n',
-                  f'Given alpha = {angle % 360} deg.\n\n***\n\n')
+            print(
+                "\n***\n\nBEWARE ANGLES MUST BE IN DEGREE!!\n",
+                f"Given alpha = {angle % 360} deg.\n\n***\n\n",
+            )
 
         self.output_digits = output_digits
 
@@ -39,7 +43,7 @@ class PGMCompiler:
         self._instructions = []
 
     # Methods
-    def header(self, fabbrication_line: str = 'CAPABLE'):
+    def header(self, fabbrication_line: str = "CAPABLE"):
         """
         HEADER.
 
@@ -56,15 +60,16 @@ class PGMCompiler:
         None.
 
         """
-        assert fabbrication_line.upper() in ['CAPABLE', 'FIRE'], \
-            ('Specified fabrication line is neither CAPABLE nor FIRE. '
-             f'Given {fabbrication_line.upper()}.')
+        assert fabbrication_line.upper() in ["CAPABLE", "FIRE"], (
+            "Specified fabrication line is neither CAPABLE nor FIRE. "
+            f"Given {fabbrication_line.upper()}."
+        )
 
-        if fabbrication_line.upper() == 'CAPABLE':
-            with open(os.path.join(CWD, 'header_capable.txt')) as fd:
+        if fabbrication_line.upper() == "CAPABLE":
+            with open(os.path.join(CWD, "header_capable.txt")) as fd:
                 self._instructions.extend(fd.readlines())
         else:
-            with open(os.path.join(CWD, 'header_fire.txt')) as fd:
+            with open(os.path.join(CWD, "header_fire.txt")) as fd:
                 self._instructions.extend(fd.readlines())
 
     def dvar(self, variables: List[str]):
@@ -83,8 +88,8 @@ class PGMCompiler:
         None.
 
         """
-        args = ' '.join(["${}"]*len(variables)).format(*variables)
-        self._instructions.append(f'DVAR {args}\n')
+        args = " ".join(["${}"] * len(variables)).format(*variables)
+        self._instructions.append(f"DVAR {args}\n")
 
     def comment(self, comstring: str):
         """
@@ -102,7 +107,7 @@ class PGMCompiler:
         None.
 
         """
-        self._instructions.append(f'; {comstring}\n')
+        self._instructions.append(f"; {comstring}\n")
 
     def shutter(self, state: str):
         """
@@ -125,16 +130,16 @@ class PGMCompiler:
         None.
 
         """
-        assert state.upper() in ['ON', 'OFF'], \
-            ('Specified shutter state is neither ON nor OFF. '
-             f'Given {state.upper()}.')
+        assert state.upper() in ["ON", "OFF"], (
+            "Specified shutter state is neither ON nor OFF. " f"Given {state.upper()}."
+        )
 
-        if state.upper() == 'ON' and self._shutter_on is False:
+        if state.upper() == "ON" and self._shutter_on is False:
             self._shutter_on = True
-            self._instructions.append('PSOCONTROL X ON\n')
-        elif state.upper() == 'OFF' and self._shutter_on is True:
+            self._instructions.append("PSOCONTROL X ON\n")
+        elif state.upper() == "OFF" and self._shutter_on is True:
             self._shutter_on = False
-            self._instructions.append('PSOCONTROL X OFF\n')
+            self._instructions.append("PSOCONTROL X OFF\n")
         else:
             pass
 
@@ -154,7 +159,7 @@ class PGMCompiler:
         None.
 
         """
-        self._instructions.append(f'DWELL {pause}\n\n')
+        self._instructions.append(f"DWELL {pause}\n\n")
         self._total_dwell_time += float(pause)
 
     def set_home(self, home_pos: List[float]):
@@ -183,14 +188,15 @@ class PGMCompiler:
         None.
 
         """
-        assert self._shutter_on is False, 'Try to move with shutter OPEN.'
-        assert np.size(home_pos) == 3, \
-            ('Given final position is not valid. ' +
-             f'3 values are required, {np.size(home_pos)} were given.')
+        assert self._shutter_on is False, "Try to move with shutter OPEN."
+        assert np.size(home_pos) == 3, (
+            "Given final position is not valid. "
+            + f"3 values are required, {np.size(home_pos)} were given."
+        )
 
         x, y, z = home_pos
         args = self._format_args(x, y, z)
-        self._instructions.append(f'G92 {args}\n')
+        self._instructions.append(f"G92 {args}\n")
 
     def homing(self):
         """
@@ -203,7 +209,7 @@ class PGMCompiler:
         None.
 
         """
-        self.comment('HOMING')
+        self.comment("HOMING")
         self.move_to([0, 0, 0])
 
     def move_to(self, position: List[float], speed_pos: float = 50):
@@ -228,17 +234,18 @@ class PGMCompiler:
         None.
 
         """
-        assert np.size(position) == 3, \
-            ('Given final position is not valid. ' +
-             f'3 values are required, {np.size(position)} were given.')
+        assert np.size(position) == 3, (
+            "Given final position is not valid. "
+            + f"3 values are required, {np.size(position)} were given."
+        )
 
         if self._shutter_on is True:
-            self.shutter('OFF')
+            self.shutter("OFF")
 
         x, y, z = position
         args = self._format_args(x, y, z, speed_pos)
 
-        self._instructions.append(f'LINEAR {args}\n')
+        self._instructions.append(f"LINEAR {args}\n")
         self.dwell(self.long_pause)
 
     def for_loop(self, var: str, num: int):
@@ -259,7 +266,7 @@ class PGMCompiler:
         None.
 
         """
-        self._instructions.append(f'FOR ${var} = 0 TO {num-1}\n')
+        self._instructions.append(f"FOR ${var} = 0 TO {num-1}\n")
         self._num_for += 1
 
     def end_for(self, var: str):
@@ -278,7 +285,7 @@ class PGMCompiler:
         None.
 
         """
-        self._instructions.append(f'NEXT ${var}\n\n')
+        self._instructions.append(f"NEXT ${var}\n\n")
         self._num_for -= 1
 
     def rpt(self, num: int):
@@ -297,7 +304,7 @@ class PGMCompiler:
         None.
 
         """
-        self._instructions.append(f'REPEAT {num}\n')
+        self._instructions.append(f"REPEAT {num}\n")
         self._num_repeat += 1
 
     def endrpt(self):
@@ -311,7 +318,7 @@ class PGMCompiler:
         None.
 
         """
-        self._instructions.append('ENDREPEAT\n\n')
+        self._instructions.append("ENDREPEAT\n\n")
         self._num_repeat -= 1
 
     def tic(self):
@@ -386,10 +393,9 @@ class PGMCompiler:
 
         """
         file = self._parse_filepath(filename)
-        assert file.stem in self._loaded_files, \
-            (f'{file} not loaded. Cannot load it.')
+        assert file.stem in self._loaded_files, f"{file} not loaded. Cannot load it."
         self._instructions.append(f'FARCALL "{file}"\n')
-        self._instructions.append('PROGRAM 0 STOP\n')
+        self._instructions.append("PROGRAM 0 STOP\n")
 
     def point_to_instruction(self, M: pd.core.frame.DataFrame):
         """
@@ -424,28 +430,28 @@ class PGMCompiler:
             Values for the S coordinate.
 
         """
-        c = np.column_stack((M['x'], M['y'], M['z']))
+        c = np.column_stack((M["x"], M["y"], M["z"]))
         c_rot = np.dot(self._compute_t_matrix(), c.T).T
 
         x = c_rot[:, 0]
         y = c_rot[:, 1]
         z = c_rot[:, 2]
-        f = M['f'].to_numpy()
-        s = M['s'].to_numpy()
+        f = M["f"].to_numpy()
+        s = M["s"].to_numpy()
 
         for i in range(len(x)):
             args = self._format_args(x[i], y[i], z[i], f[i])
             if s[i] == 0 and self._shutter_on is False:
-                self._instructions.append(f'LINEAR {args}\n')
+                self._instructions.append(f"LINEAR {args}\n")
                 self.dwell(self.long_pause)
             elif s[i] == 0 and self._shutter_on is True:
-                self.shutter('OFF')
+                self.shutter("OFF")
                 self.dwell(self.short_pause)
             elif s[i] == 1 and self._shutter_on is False:
-                self.shutter('ON')
-                self._instructions.append(f'LINEAR {args}\n')
+                self.shutter("ON")
+                self._instructions.append(f"LINEAR {args}\n")
             else:
-                self._instructions.append(f'LINEAR {args}\n')
+                self._instructions.append(f"LINEAR {args}\n")
         return (x, y, z, f, s)
 
     def compile_pgm(self):
@@ -462,24 +468,26 @@ class PGMCompiler:
         None.
 
         """
-        assert self.filename is not None, 'No filename given.'
-        assert self._num_repeat == 0, \
-            (f'Missing {np.abs(self._num_repeat)} ' +
-             f'{"END REPEAT" if self._num_repeat >0 else "REPEAT"} ' +
-             f'instruction{"s" if np.abs(self._num_repeat) != 1 else ""}.')
-        assert self._num_for == 0, \
-            (f'Missing {np.abs(self._num_for)} ' +
-             f'{"NEXT" if self._num_for >0 else "FOR"} ' +
-             f'instruction{"s" if np.abs(self._num_for) != 1 else ""}.')
+        assert self.filename is not None, "No filename given."
+        assert self._num_repeat == 0, (
+            f"Missing {np.abs(self._num_repeat)} "
+            + f'{"END REPEAT" if self._num_repeat >0 else "REPEAT"} '
+            + f'instruction{"s" if np.abs(self._num_repeat) != 1 else ""}.'
+        )
+        assert self._num_for == 0, (
+            f"Missing {np.abs(self._num_for)} "
+            + f'{"NEXT" if self._num_for >0 else "FOR"} '
+            + f'instruction{"s" if np.abs(self._num_for) != 1 else ""}.'
+        )
 
         # if not present in the filename, add the proper file extension
-        if not self.filename.endswith('.pgm'):
-            self.filename += '.pgm'
+        if not self.filename.endswith(".pgm"):
+            self.filename += ".pgm"
 
         # write instruction to file
-        with open(self.filename, 'w') as f:
-            f.write(''.join(self._instructions))
-        print('G-code compilation completed.')
+        with open(self.filename, "w") as f:
+            f.write("".join(self._instructions))
+        print("G-code compilation completed.")
 
     # Private interface
     def _compute_t_matrix(self) -> np.ndarray:
@@ -496,19 +504,19 @@ class PGMCompiler:
             Transformation matrix: TM = SM*RM
 
         """
-        RM = np.array([[np.cos(self.angle), -np.sin(self.angle), 0],
-                       [np.sin(self.angle), np.cos(self.angle), 0],
-                       [0, 0, 1]])
-        SM = np.array([[1, 0, 0],
-                       [0, 1, 0],
-                       [0, 0, 1/self.ind_rif]])
+        RM = np.array(
+            [
+                [np.cos(self.angle), -np.sin(self.angle), 0],
+                [np.sin(self.angle), np.cos(self.angle), 0],
+                [0, 0, 1],
+            ]
+        )
+        SM = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1 / self.ind_rif]])
         return np.dot(SM, RM)
 
-    def _format_args(self,
-                     x: float = None,
-                     y: float = None,
-                     z: float = None,
-                     f: float = None) -> str:
+    def _format_args(
+        self, x: float = None, y: float = None, z: float = None, f: float = None
+    ) -> str:
         """
         FORMAT ARGUMENTS.
 
@@ -544,27 +552,23 @@ class PGMCompiler:
 
         args = []
         if x is not None:
-            args.append('{0}{1:.{digits}f}'.format('X', x,
-                                                   digits=self.output_digits))
+            args.append("{0}{1:.{digits}f}".format("X", x, digits=self.output_digits))
         if y is not None:
-            args.append('{0}{1:.{digits}f}'.format('Y', y,
-                                                   digits=self.output_digits))
+            args.append("{0}{1:.{digits}f}".format("Y", y, digits=self.output_digits))
         if z is not None:
-            args.append('{0}{1:.{digits}f}'.format('Z', z,
-                                                   digits=self.output_digits))
+            args.append("{0}{1:.{digits}f}".format("Z", z, digits=self.output_digits))
         if f is not None:
             if f < 1e-6:
-                raise ValueError('Try to move with F = 0.0 mm/s.',
-                                 'Check speed parameter.')
-            args.append('{0}{1:.{digits}f}'.format('F', f,
-                                                   digits=self.output_digits))
-        args = ' '.join(args)
+                raise ValueError(
+                    "Try to move with F = 0.0 mm/s.", "Check speed parameter."
+                )
+            args.append("{0}{1:.{digits}f}".format("F", f, digits=self.output_digits))
+        args = " ".join(args)
         return args
 
-    def _parse_filepath(self,
-                        filename: str,
-                        filepath: str = None,
-                        extension: str = None) -> Path:
+    def _parse_filepath(
+        self, filename: str, filepath: str = None, extension: str = None
+    ) -> Path:
         """
         PARSE FILEPATH.
 
@@ -589,41 +593,42 @@ class PGMCompiler:
 
         """
         if extension is not None:
-            assert filename.endswith(extension), \
-                ('Given filename has wrong extension.' +
-                 f'Given {filename}, required .{extension}.')
+            assert filename.endswith(extension), (
+                "Given filename has wrong extension."
+                + f"Given {filename}, required .{extension}."
+            )
 
         file = Path(filepath) / filename if filepath is not None else filename
-        assert filename.exist(), f'{file} does not exist.'
+        assert filename.exist(), f"{file} does not exist."
         return file
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # Data
     pitch = 0.080
     int_dist = 0.007
     angle = 1
-    ind_rif = 1.5/1.33
+    ind_rif = 1.5 / 1.33
 
-    d_bend = 0.5*(pitch-int_dist)
+    d_bend = 0.5 * (pitch - int_dist)
     increment = [4, 0, 0]
 
     # Calculations
     coup = [Waveguide(num_scan=6) for _ in range(2)]
     for i, wg in enumerate(coup):
-        wg.start([-2, -pitch/2 + i*pitch, 0.035])
+        wg.start([-2, -pitch / 2 + i * pitch, 0.035])
         wg.linear(increment, speed=20)
-        wg.sin_mzi((-1)**i*d_bend, radius=15, arm_length=1.0, speed=20, N=50)
+        wg.sin_mzi((-1) ** i * d_bend, radius=15, arm_length=1.0, speed=20, N=50)
         wg.linear(increment, speed=20)
         wg.end()
 
     # Compilation
-    gc = PGMCompiler('testPGMcompiler', ind_rif=ind_rif, angle=angle)
+    gc = PGMCompiler("testPGMcompiler", ind_rif=ind_rif, angle=angle)
     gc.header()
     gc.rpt(wg.num_scan)
     for i, wg in enumerate(coup):
-        gc.comment(f'Modo: {i}')
+        gc.comment(f"Modo: {i}")
         gc.point_to_instruction(wg.M)
     gc.endrpt()
     gc.move_to([None, 0, 0.1])

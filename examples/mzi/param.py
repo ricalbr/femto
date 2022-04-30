@@ -13,8 +13,8 @@ x0 = -2.0
 y0 = 0.0
 z0 = depth
 
-d = 0.5*(pitch-int_distance)
+d = 0.5 * (pitch - int_distance)
 
 # %% G-CODE DATA
 n_scan = 6
-ind_rif = 1.5/1.33
+ind_rif = 1.5 / 1.33
