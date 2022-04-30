@@ -9,7 +9,9 @@ from typing import List
 
 
 class Marker(Waveguide):
-    def __init__(self, depth: float = 0.001, speed: float = 1, num_scan: int = 1):
+    def __init__(
+        self, depth: float = 0.001, speed: float = 1, num_scan: int = 1
+    ):
         super(Marker, self).__init__(num_scan)
 
         self.depth = depth
@@ -67,7 +69,9 @@ class Marker(Waveguide):
         self.linear([0, -ly / 2, 0], speed=speed_pos, shutter=0)
         self.end(speed_pos)
 
-    def ruler(self, y_ticks: List, lx: float, x_init: float = -2, speed_pos: float = 5):
+    def ruler(
+        self, y_ticks: List, lx: float, x_init: float = -2, speed_pos: float = 5
+    ):
 
         tick_len = 0.75 * lx * np.ones_like(y_ticks)
         tick_len[0] = lx

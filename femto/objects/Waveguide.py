@@ -93,7 +93,9 @@ class Waveguide:
 
         """
         if self._M:
-            return np.array([self._M["x"][-1], self._M["y"][-1], self._M["z"][-1]])
+            return np.array(
+                [self._M["x"][-1], self._M["y"][-1], self._M["z"][-1]]
+            )
         else:
             return []
 
@@ -199,7 +201,8 @@ class Waveguide:
         """
         if mode.upper() not in ["ABS", "INC"]:
             raise ValueError(
-                "Mode should be either ABS or INC.", f"{mode.upper()} was given."
+                "Mode should be either ABS or INC.",
+                f"{mode.upper()} was given.",
             )
         if mode.upper() == "ABS":
             self._M["x"].append(increment[0])
@@ -257,8 +260,16 @@ class Waveguide:
 
         """
         t = np.linspace(initial_angle, final_angle, N)
-        new_x = self._M["x"][-1] - radius * np.cos(initial_angle) + radius * np.cos(t)
-        new_y = self._M["y"][-1] - radius * np.sin(initial_angle) + radius * np.sin(t)
+        new_x = (
+            self._M["x"][-1]
+            - radius * np.cos(initial_angle)
+            + radius * np.cos(t)
+        )
+        new_y = (
+            self._M["y"][-1]
+            - radius * np.sin(initial_angle)
+            + radius * np.sin(t)
+        )
         new_z = self._M["z"][-1] * np.ones(new_x.shape)
 
         # update coordinates
@@ -280,7 +291,12 @@ class Waveguide:
         self._M["s"].extend(shutter * np.ones(new_x.shape))
 
     def arc_bend(
-        self, D: float, radius: float, speed: float = 0.0, shutter: int = 1, N: int = 25
+        self,
+        D: float,
+        radius: float,
+        speed: float = 0.0,
+        shutter: int = 1,
+        N: int = 25,
     ):
         """
         CIRCULAR BEND.
@@ -436,15 +452,30 @@ class Waveguide:
 
         """
         self.arc_acc(
-            D, radius, arm_length=arm_length, speed=speed, shutter=shutter, N=N / 2
+            D,
+            radius,
+            arm_length=arm_length,
+            speed=speed,
+            shutter=shutter,
+            N=N / 2,
         )
         self.linear([int_length, 0, 0], speed=speed, shutter=shutter)
         self.arc_acc(
-            D, radius, arm_length=arm_length, speed=speed, shutter=shutter, N=N / 2
+            D,
+            radius,
+            arm_length=arm_length,
+            speed=speed,
+            shutter=shutter,
+            N=N / 2,
         )
 
     def sin_bend(
-        self, D: float, radius: float, speed: float = 0.0, shutter: int = 1, N: int = 25
+        self,
+        D: float,
+        radius: float,
+        speed: float = 0.0,
+        shutter: int = 1,
+        N: int = 25,
     ):
         """
         SINUSOIDAL BEND.
@@ -601,11 +632,21 @@ class Waveguide:
 
         """
         self.sin_acc(
-            D, radius, int_length=int_length, speed=speed, shutter=shutter, N=N / 2
+            D,
+            radius,
+            int_length=int_length,
+            speed=speed,
+            shutter=shutter,
+            N=N / 2,
         )
         self.linear([arm_length, 0, 0], speed=speed, shutter=shutter)
         self.sin_acc(
-            D, radius, int_length=int_length, speed=speed, shutter=shutter, N=N / 2
+            D,
+            radius,
+            int_length=int_length,
+            speed=speed,
+            shutter=shutter,
+            N=N / 2,
         )
 
     def curvature(self) -> np.ndarray:

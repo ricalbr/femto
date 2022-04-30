@@ -131,7 +131,8 @@ class PGMCompiler:
 
         """
         assert state.upper() in ["ON", "OFF"], (
-            "Specified shutter state is neither ON nor OFF. " f"Given {state.upper()}."
+            "Specified shutter state is neither ON nor OFF. "
+            f"Given {state.upper()}."
         )
 
         if state.upper() == "ON" and self._shutter_on is False:
@@ -393,7 +394,9 @@ class PGMCompiler:
 
         """
         file = self._parse_filepath(filename)
-        assert file.stem in self._loaded_files, f"{file} not loaded. Cannot load it."
+        assert (
+            file.stem in self._loaded_files
+        ), f"{file} not loaded. Cannot load it."
         self._instructions.append(f'FARCALL "{file}"\n')
         self._instructions.append("PROGRAM 0 STOP\n")
 
@@ -552,17 +555,25 @@ class PGMCompiler:
 
         args = []
         if x is not None:
-            args.append("{0}{1:.{digits}f}".format("X", x, digits=self.output_digits))
+            args.append(
+                "{0}{1:.{digits}f}".format("X", x, digits=self.output_digits)
+            )
         if y is not None:
-            args.append("{0}{1:.{digits}f}".format("Y", y, digits=self.output_digits))
+            args.append(
+                "{0}{1:.{digits}f}".format("Y", y, digits=self.output_digits)
+            )
         if z is not None:
-            args.append("{0}{1:.{digits}f}".format("Z", z, digits=self.output_digits))
+            args.append(
+                "{0}{1:.{digits}f}".format("Z", z, digits=self.output_digits)
+            )
         if f is not None:
             if f < 1e-6:
                 raise ValueError(
                     "Try to move with F = 0.0 mm/s.", "Check speed parameter."
                 )
-            args.append("{0}{1:.{digits}f}".format("F", f, digits=self.output_digits))
+            args.append(
+                "{0}{1:.{digits}f}".format("F", f, digits=self.output_digits)
+            )
         args = " ".join(args)
         return args
 
@@ -619,7 +630,9 @@ if __name__ == "__main__":
     for i, wg in enumerate(coup):
         wg.start([-2, -pitch / 2 + i * pitch, 0.035])
         wg.linear(increment, speed=20)
-        wg.sin_mzi((-1) ** i * d_bend, radius=15, arm_length=1.0, speed=20, N=50)
+        wg.sin_mzi(
+            (-1) ** i * d_bend, radius=15, arm_length=1.0, speed=20, N=50
+        )
         wg.linear(increment, speed=20)
         wg.end()
 

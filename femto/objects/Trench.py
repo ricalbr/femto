@@ -34,7 +34,9 @@ class Trench:
 
     @property
     def center(self):
-        return np.asarray([self.trench_block.centroid.x, self.trench_block.centroid.y])
+        return np.asarray(
+            [self.trench_block.centroid.x, self.trench_block.centroid.y]
+        )
 
     @property
     def border(self):
@@ -50,7 +52,9 @@ class Trench:
 
     @property
     def patch(self, fc="k", ec="k", alpha=0.5, zorder=1):
-        return PolygonPatch(self.trench_block, fc=fc, ec=ec, alpha=alpha, zorder=zorder)
+        return PolygonPatch(
+            self.trench_block, fc=fc, ec=ec, alpha=alpha, zorder=zorder
+        )
 
     def get_paths(self):
         # Initialization
@@ -68,7 +72,9 @@ class Trench:
                 polygon_list.append(inset_polygon)
                 insets.append(list(inset_polygon.exterior.coords))
             elif inset_polygon:
-                raise ValueError("Unhandled geometry type: " f"{inset_polygon.type}")
+                raise ValueError(
+                    "Unhandled geometry type: " f"{inset_polygon.type}"
+                )
         self._wall = np.asarray(list(self.trench_block.exterior.coords)).T
         self._floor = np.asarray(list(chain.from_iterable(insets))).T
 
@@ -144,7 +150,9 @@ class TrenchColumn:
     @property
     def patch(self, fc="k", ec="k", alpha=0.5, zorder=1):
         if isinstance(self._rect, MultiPolygon):
-            return PolygonPatch(self._rect, fc=fc, ec=ec, alpha=alpha, zorder=zorder)
+            return PolygonPatch(
+                self._rect, fc=fc, ec=ec, alpha=alpha, zorder=zorder
+            )
 
     def get_trench(self, circuit: List):
 
@@ -154,7 +162,9 @@ class TrenchColumn:
 
         for wg in circuit:
             x, y = np.array(wg.M["x"][:-2]), np.array(wg.M["y"][:-2])
-            dilated = LineString(list(zip(x, y))).buffer(self.adj_bridge, cap_style=1)
+            dilated = LineString(list(zip(x, y))).buffer(
+                self.adj_bridge, cap_style=1
+            )
             self._rect = self._rect.difference(dilated)
 
         for block in list(self._rect):
