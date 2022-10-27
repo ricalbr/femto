@@ -76,7 +76,7 @@ class LaserPathParameters:
         # end of laser path (outside the sample)
         return self.samplesize[0] + self.lsafe
 
-@dataclass
+
 class LaserPath(LaserPathParameters):
     """
     Class of irradiated paths. It manages all the coordinates of the laser path and computes the fabrication writing
