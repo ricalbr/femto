@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from typing import List
+
+from dacite import from_dict
 
 try:
     from typing import Self
@@ -7,16 +10,18 @@ except ImportError:
 import numpy as np
 
 from femto.Parameters import MarkerParameters
+from femto import LaserPath
 from femto.helpers import sign
 
 
-class Marker(MarkerParameters):
+@dataclass(kw_only=True)
+class _Marker(LaserPath, MarkerParameters):
     """
     Class representing an ablation marker.
     """
 
-    def __init__(self, param: dict):
-        super().__init__(**param)
+    def __post_init__(self):
+        super().__post_init__()
 
     def start(self, init_pos: List[float] = None, speedpos: float = None) -> Self:
         """
@@ -31,7 +36,7 @@ class Marker(MarkerParameters):
         :param speedpos: Translation speed [mm/s].
         :type speedpos: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
 
         if init_pos is None:
@@ -61,7 +66,7 @@ class Marker(MarkerParameters):
         speed specified by the user.
 
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         x = np.array([self._x[-1]]).astype(np.float32)
         y = np.array([self._y[-1]]).astype(np.float32)
@@ -69,8 +74,7 @@ class Marker(MarkerParameters):
         f = np.array([self.speed_closed]).astype(np.float32)
         s = np.array([0]).astype(np.float32)
         self.add_path(x, y, z, f, s)
-        self.fabrication_time()
-    
+
     def linear(self, increment: list, mode: str = 'INC', shutter: int = 1, speed: float = None) -> Self:
         """
         Adds a linear increment to the last point of the current waveguide.
@@ -88,7 +92,7 @@ class Marker(MarkerParameters):
         :param speed: Transition speed [mm/s]. The default is self.param.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
 
         :raise ValueError: Mode is neither INC nor ABS.
         """
@@ -97,9 +101,10 @@ class Marker(MarkerParameters):
         x_inc, y_inc, z_inc = increment
         f = self.speed if speed is None else speed
         if mode.upper() == 'ABS':
-            self.add_path(x_inc, y_inc, z_inc, f, shutter)
+            self.add_path(x_inc, y_inc, z_inc, np.asarray(f), np.asarray(shutter))
         else:
-            self.add_path(self._x[-1] + x_inc, self._y[-1] + y_inc, self._z[-1] + z_inc, f, shutter)
+            self.add_path(self._x[-1] + x_inc, self._y[-1] + y_inc, self._z[-1] + z_inc, np.asarray(f),
+                          np.asarray(shutter))
         return self
 
     def cross(self, position: List[float], lx: float = 1, ly: float = 0.05):
@@ -228,8 +233,11 @@ class Marker(MarkerParameters):
         self.end()
 
 
+def Marker(param):
+    return from_dict(data_class=_Marker, data=param)
+
+
 def _example():
-    from femto import PGMCompiler
     from femto.helpers import dotdict
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
@@ -251,11 +259,12 @@ def _example():
 
     c = Marker(PARAMETERS_MK)
     c.cross([2.5, 1], 5, 2)
-#    c.ruler([1,2,3,5] , 0.75)
     print(c.points)
 
-    # with PGMCompiler(PARAMETERS_GC) as gc:
-    #     gc.write(c.points)
+    from femto import PGMCompiler
+    with PGMCompiler(PARAMETERS_GC) as gc:
+        gc.write(c.points)
+
     # Plot
     fig = plt.figure()
     fig.clf()
@@ -267,7 +276,6 @@ def _example():
     ax.plot(c.x, c.y, c.z, '-k', linewidth=2.5)
     ax.set_box_aspect(aspect=(3, 1, 0.5))
     plt.show()
-
 
 
 if __name__ == '__main__':

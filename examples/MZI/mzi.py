@@ -1,7 +1,6 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
-from femto import Cell, Waveguide, PGMCompiler
+from femto import Cell, PGMCompiler, _Waveguide
 from param import *
 
 np.set_printoptions(formatter={'float': "\t{: 0.6f}".format})
@@ -10,8 +9,7 @@ np.set_printoptions(formatter={'float': "\t{: 0.6f}".format})
 mzi = Cell(PARAMETERS_GC)
 
 for i in range(2):
-
-    wg = Waveguide(PARAMETERS_WG)
+    wg = _Waveguide(PARAMETERS_WG)
     wg.start([wg.x_init, wg.y_init - (0.5 - i) * PARAMETERS_WG.pitch, wg.depth]) \
         .linear(increment) \
         .sin_mzi((-1) ** i * d, arm_length=wg.arm_length) \

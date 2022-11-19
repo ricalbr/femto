@@ -1,6 +1,8 @@
+from dataclasses import dataclass
 from typing import List
 
 import numpy as np
+from dacite import from_dict
 
 try:
     from typing import Self
@@ -8,17 +10,19 @@ except ImportError:
     from typing_extensions import Self
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline
 from functools import partialmethod
-#rom femto.LaserPath import LaserPath
 from femto.helpers import dotdict
+from femto import LaserPath
 from femto.Parameters import WaveguideParameters
 
-class Waveguide(WaveguideParameters):
+
+@dataclass(kw_only=True)
+class _Waveguide(LaserPath, WaveguideParameters):
     """
     Class representing an optical waveguide.
     """
 
-    def __init__(self, param: dict):
-        super().__init__(**param)
+    def __post_init__(self):
+        super().__post_init__()
 
     def __repr__(self):
         return "{cname}@{id:x}".format(cname=self.__class__.__name__, id=id(self) & 0xFFFFFF)
@@ -37,7 +41,7 @@ class Waveguide(WaveguideParameters):
         :param speedpos: Translation speed [mm/s].
         :type speedpos: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if init_pos is None:
             x0, y0, z0 = self.init_point
@@ -63,11 +67,8 @@ class Waveguide(WaveguideParameters):
         speed specified by the user.
 
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
-
-        # flip the path
-        self.flip_path()
 
         # append the transformed path and add the coordinates to return to the initial point
         x = np.array([self._x[-1], self._x[0]]).astype(np.float32)
@@ -76,7 +77,6 @@ class Waveguide(WaveguideParameters):
         f = np.array([self._f[-1], self.speed_closed]).astype(np.float32)
         s = np.array([0, 0]).astype(np.float32)
         self.add_path(x, y, z, f, s)
-        self.fabrication_time()
 
     def linear(self, increment: list, mode: str = 'INC', shutter: int = 1, speed: float = None) -> Self:
         """
@@ -95,7 +95,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.param.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
 
         :raise ValueError: Mode is neither INC nor ABS.
         """
@@ -104,9 +104,10 @@ class Waveguide(WaveguideParameters):
         x_inc, y_inc, z_inc = increment
         f = self.speed if speed is None else speed
         if mode.upper() == 'ABS':
-            self.add_path(x_inc, y_inc, z_inc, f, shutter)
+            self.add_path(x_inc, y_inc, z_inc, np.asarray(f), np.asarray(shutter))
         else:
-            self.add_path(self._x[-1] + x_inc, self._y[-1] + y_inc, self._z[-1] + z_inc, f, shutter)
+            self.add_path(self._x[-1] + x_inc, self._y[-1] + y_inc, self._z[-1] + z_inc, np.asarray(f), np.asarray(
+                    shutter))
         return self
 
     def circ(self, initial_angle: float, final_angle: float, radius: float = None, shutter: int = 1,
@@ -127,7 +128,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: int
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if radius is None:
             radius = self.radius
@@ -164,7 +165,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if radius is None:
             radius = self.radius
@@ -199,7 +200,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if int_length is None:
             int_length = self.int_length
@@ -232,7 +233,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if arm_length is None:
             arm_length = self.arm_length
@@ -275,7 +276,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
 
         if radius is None:
@@ -298,12 +299,9 @@ class Waveguide(WaveguideParameters):
 
     sin_bend = partialmethod(sin_bridge, dz=None)
 
-    def sin_bend_comp(self, dx: float, dy: float, radius: float = None, shutter: int = 1, speed: float = None) -> Self:
+    def sin_bend_comp(self, dx: float, dy: float, shutter: int = 1, speed: float = None) -> Self:
 
-        if radius is None:
-            radius = self.radius
         f = self.speed if speed is None else speed
-
         num = self._get_num(dx, f)
 
         new_x = np.linspace(self._x[-1], self._x[-1] + dx, num)
@@ -336,7 +334,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if int_length is None:
             int_length = self.int_length
@@ -369,7 +367,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if arm_length is None:
             arm_length = self.arm_length
@@ -408,7 +406,7 @@ class Waveguide(WaveguideParameters):
         :param bc_z:
         :type bc_z: tuple
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if radius is None:
             radius = self.radius
@@ -453,7 +451,7 @@ class Waveguide(WaveguideParameters):
         :param speed: Transition speed [mm/s]. The default is self.speed.
         :type speed: float
         :return: Self
-        :rtype: Waveguide
+        :rtype: _Waveguide
         """
         if init_pos is None:
             init_pos = self.lastpt
@@ -492,8 +490,9 @@ class Waveguide(WaveguideParameters):
         :return: Array of the curvature radii computed at each point of the curve.
         :rtype: numpy.ndarray
         """
-        (x, y, z, _, _) = self._unique_points().T
-
+        
+        (x, y, z) = self.path3d
+        
         dx_dt = np.gradient(x)
         dy_dt = np.gradient(y)
         dz_dt = np.gradient(z)
@@ -510,7 +509,7 @@ class Waveguide(WaveguideParameters):
 
         # only divide nonzeros else Inf
         curvature_radius = np.divide(num, den, out=default_zero, where=(den != 0))
-        return curvature_radius
+        return curvature_radius[2:-2]
 
     def cmd_rate(self) -> np.ndarray:
         """
@@ -579,35 +578,14 @@ class Waveguide(WaveguideParameters):
 
         return xcoord + init_pos[0], cs_y(xcoord) + init_pos[1], cs_z(xcoord) + init_pos[2]
 
-    def _get_num(self, l_curve: float = 0, speed: float = 0) -> int:
-        """
-        Utility function that, given the length of a segment and the fabrication speed, computes the number of points
-        required to work at the maximum command rate (attribute of Waveguide obj).
 
-        :param l_curve: Length of the waveguide segment [mm]. The default is 0 mm.
-        :type l_curve: float
-        :param speed: Fabrication speed [mm/s]. The default is 0 mm/s.
-        :type speed: float
-        :return: Number of subdivisions.
-        :rtype: int
-
-        :raise ValueError: Speed is set too low.
-        """
-        f = self.speed if speed is None else speed
-        if f < 1e-6:
-            raise ValueError('Speed set to 0.0 mm/s. Check speed parameter.')
-
-        dl = f / self.cmd_rate_max
-        num = int(np.ceil(l_curve / dl))
-        if num <= 1:
-            print('I had to add use an higher instruction rate.\n')
-            return 3
-        return num
+def Waveguide(param):
+    return from_dict(data_class=_Waveguide, data=param)
 
 
 def coupler(param, d=None):
     p = dotdict(param.copy())
-    
+
     if d is not None:
         p.int_dist = d
 
@@ -643,7 +621,6 @@ def _example():
             pitch=0.080,
             int_dist=0.007,
             lsafe=3,
-            flip_x=True,
     )
 
     increment = [PARAMETERS_WG.lsafe, 0, 0]
@@ -677,8 +654,8 @@ def _example():
         ax.plot(wg.x[-2:], wg.y[-2:], wg.z[-2:], ':b', linewidth=1.0)
     ax.set_box_aspect(aspect=(3, 1, 0.5))
     plt.show()
-    
-    print("Expected writing time {:.3f} seconds".format(wg.wtime))
+
+    print("Expected writing time {:.3f} seconds".format(wg.fabrication_time))
     print("Laser path length {:.3f} mm".format(wg.length))
 
 

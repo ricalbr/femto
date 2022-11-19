@@ -2,6 +2,8 @@ from functools import partial
 from itertools import cycle
 from typing import List
 
+import numpy as np
+
 
 def grouped(iterable, n):
     """s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."""
@@ -66,3 +68,14 @@ def flatten(items, seqtypes=(list, tuple)):
 
 def sign():
     return cycle([1, -1])
+
+
+def unique_filter(arrays: List) -> np.ndarray:
+    # data matrix
+    data = np.stack(arrays, axis=-1).astype(np.float32)
+
+    # mask
+    mask = np.diff(data, axis=0)
+    mask = np.sum(np.abs(mask), axis=1, dtype=bool)
+    mask = np.insert(mask, 0, True)
+    return data[mask]

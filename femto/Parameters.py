@@ -11,15 +11,63 @@ import shapely.geometry
 from scipy.interpolate import interp2d
 from shapely.geometry import box
 
-from femto.LaserPath import LaserPath #Parent of all structures
+
+@dataclass(kw_only=True)
+class LaserPathParameters:
+    """
+    Class containing the parameters for generic FLM written structure fabrication.
+    """
+
+    scan: int = 1
+    speed: float = 1.0
+    x_init: float = -2.0
+    y_init: float = None
+    z_init: float = None
+    lsafe: float = 2.0
+    speed_closed: float = 5
+    speed_pos: float = 0.5
+    cmd_rate_max: float = 1200
+    acc_max: float = 500
+    samplesize: Tuple[float, float] = (None, None)
+
+    def __post_init__(self):
+
+        if not isinstance(self.scan, int):
+            raise ValueError('Number of scan must be integer.')
+
+    @property
+    def init_point(self):
+        if self.y_init is None:
+            y0 = 0.0
+        else:
+            y0 = self.y_init
+        if self.z_init is None:
+            z0 = 0.0
+        else:
+            z0 = self.z_init
+        return [self.x_init, y0, z0]
+
+    @property
+    def lvelo(self) -> float:
+        # length needed to acquire the writing speed [mm]
+        return 3 * (0.5 * self.speed ** 2 / self.acc_max)
+
+    @property
+    def dl(self) -> float:
+        # minimum separation between two points [mm]
+        return self.speed / self.cmd_rate_max
+
+    @property
+    def x_end(self) -> float:
+        # end of laser path (outside the sample)
+        return self.samplesize[0] + self.lsafe
 
 
-@dataclass
-class WaveguideParameters(LaserPath):
+@dataclass(kw_only=True)
+class WaveguideParameters(LaserPathParameters):
     """
     Class containing the parameters for the waveguide fabrication.
     """
-
 
     depth: float = 0.035
     radius: float = 15
@@ -32,10 +80,12 @@ class WaveguideParameters(LaserPath):
     dz_bridge: float = 0.007
     margin: float = 1.0
 
-
     def __post_init__(self):
-        #parent method redefinition, to inclure depth property
+        super().__post_init__()
+
+        # parent method redefinition, to include depth property
         if not isinstance(self.scan, int):
+            print(self.scan)
             raise ValueError('Number of scan must be integer.')
 
         if self.z_init is None:
@@ -43,7 +93,7 @@ class WaveguideParameters(LaserPath):
 
     @property
     def init_point(self):
-        #parent method redefinition, to inclure depth property
+        # parent method redefinition, to inclure depth property
         if self.y_init is None:
             y0 = 0.0
         else:
@@ -84,7 +134,6 @@ class WaveguideParameters(LaserPath):
             return None
         else:
             return 0.5 * (self.pitch - self.int_dist)
-
 
     @staticmethod
     def get_sbend_parameter(dy: float, radius: float) -> tuple:
@@ -150,15 +199,20 @@ class WaveguideParameters(LaserPath):
             l_curve = 2 * ang * radius
         return pos_diff[0], pos_diff[1], pos_diff[2], l_curve
 
-@dataclass
-class MarkerParameters(LaserPath):
+
+@dataclass(kw_only=True)
+class MarkerParameters(LaserPathParameters):
     """
     Class containing the parameters for the surface ablation marker fabrication.
     """
     depth: float = 0.0
+    lx: float = 1.0
+    ly: float = 0.060
 
     def __post_init__(self):
-        #parent method redefinition, to inclure depth property
+        super().__post_init__()
+
+        # parent method redefinition, to include depth property
         if not isinstance(self.scan, int):
             raise ValueError('Number of scan must be integer.')
 
@@ -167,7 +221,7 @@ class MarkerParameters(LaserPath):
 
     @property
     def init_point(self):
-        #parent method redefinition, to inclure depth property
+        # parent method redefinition, to include depth property
         if self.y_init is None:
             y0 = 0.0
         else:
@@ -179,7 +233,26 @@ class MarkerParameters(LaserPath):
         return [self.x_init, y0, z0]
 
 
-@dataclass
+@dataclass(kw_only=True)
+class RasterImageParameters(LaserPathParameters):
+    """
+    Class containing the parameters for generic FLM written structure fabrication.
+    """
+    px_to_mm: float = 0.01  # pixel to millimeter scale when converting image to laser path
+    img_size: Tuple[int, int] = (None, None)
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    @property
+    def path_size(self):
+        if not all(self.img_size):  # check if img_size is None
+            raise ValueError("No image size given, unable to compute laserpath dimension")
+        else:
+            return tuple(self.px_to_mm * elem for elem in self.img_size)
+
+
+@dataclass(kw_only=True)
 class TrenchParameters:
     """
     Class containing the parameters for trench fabrication.
@@ -240,7 +313,8 @@ class TrenchParameters:
             return box(self.x_center - self.length / 2, self.y_min,
                        self.x_center + self.length / 2, self.y_max)
 
-@dataclass
+
+@dataclass(kw_only=True)
 class GcodeParameters:
     """
     Class containing the parameters for the G-Code file compiler.
@@ -261,6 +335,8 @@ class GcodeParameters:
     short_pause: float = 0.05
     output_digits: int = 6
     speed_pos: float = 5.0
+    flip_x: bool = False
+    flip_y: bool = False
 
     def __post_init__(self):
         if self.filename is None:
@@ -387,18 +463,3 @@ class GcodeParameters:
         plt.show()
 
         return func_antiwarp
-
-@dataclass
-class RasterImageParameters(LaserPath):
-    """
-    Class containing the parameters for generic FLM written structure fabrication.
-    """        
-    px_to_mm: int = 0.01 #pixel to millimeter scale when converting image to laser path
-    img_size: Tuple[int,int]=(None,None)        
-    
-    @property
-    def path_size(self):  
-        if not all(self.img_size): #check if img_size is None
-            raise ValueError("No image size given, unable to compute laserpath dimension")
-        else:
-            return tuple(self.px_to_mm * elem for elem in self.img_size)

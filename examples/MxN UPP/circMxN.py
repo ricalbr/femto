@@ -1,6 +1,6 @@
 import time
 
-from femto import Cell, Marker, TrenchColumn, Waveguide
+from femto import Cell, _Marker, TrenchColumn, _Waveguide
 from param import *
 
 t0 = time.perf_counter()
@@ -13,7 +13,7 @@ upp = []
 for i in range(MM):
     [xi, yi, zi] = [x0, y0 + (i - 0.5 * (MM - 1)) * PARAMETERS_WG.pitch, PARAMETERS_WG.depth]
 
-    wg = Waveguide(PARAMETERS_WG)
+    wg = _Waveguide(PARAMETERS_WG)
     wg.start([xi, yi, zi])
     wg.linear(increment)
     wg.sin_bend((-1) ** (i % 2) * d1)
@@ -21,7 +21,7 @@ for i in range(MM):
         wg.sin_bend((-1) ** (j + i % 2 + 1) * d1)
         if i == 0:
             xl, yl, _ = wg.lastpt
-            mk = Marker(PARAMETERS_MK)
+            mk = _Marker(PARAMETERS_MK)
             mk.cross([xl, yl - 0.2], lx, ly)
             circ.append(mk)
             x_trench.append(xl)
@@ -30,7 +30,7 @@ for i in range(MM):
     wg.sin_bend((-1) ** (j + i % 2) * d1)
     if i == 0:
         xl, yl, _ = wg.lastpt
-        mk = Marker(PARAMETERS_MK)
+        mk = _Marker(PARAMETERS_MK)
         mk.cross([xl, yl - 0.2], lx, ly)
         circ.append(mk)
         x_trench.append(xl)
@@ -39,11 +39,11 @@ for i in range(MM):
     wg.end()
     upp.append(wg)
 
-wgp1 = Waveguide(PARAMETERS_WG)
+wgp1 = _Waveguide(PARAMETERS_WG)
 p_init = [x0, y0 - 0.5 * (MM + 1) * wgp1.pitch, wgp1.depth]
 wgp1.start(p_init).linear([wgp1.x_end, wgp1.lasty, wgp1.lastz], mode='ABS').end()
 
-wgp2 = Waveguide(PARAMETERS_WG)
+wgp2 = _Waveguide(PARAMETERS_WG)
 p_init = [x0, y0 + 0.5 * (MM + 1) * wgp1.pitch, wgp1.depth]
 wgp2.start(p_init).linear([wgp2.x_end, wgp2.lasty, wgp2.lastz], mode='ABS').end()
 

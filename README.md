@@ -43,7 +43,24 @@ The following components are implemented:
 
 ## Setup
 
-Fetmo can be installed via pip via
+The preferred way to install `femto` is using `conda`.
+First, install `anaconda` or `miniconda` following the instruction [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/download.html#anaconda-or-miniconda). 
+
+Then create a virtual environment and install all the package dependencies using the following command:
+
+``` bash
+conda env create -n femto --file env.yml
+```
+
+The virtual environment can be updated using the `env.yml` file as well:
+
+```bash
+conda activate femto
+# conda activate <env_name>
+conda env update --file env.yml --prune
+```
+
+Alternatively, `femto` can also be installed via `pip` via:
 
 ```bash
 git clone git@github.com:ricalbr/femto.git
@@ -51,7 +68,7 @@ cd femto
 pip install -e .
 ```
 
-Alternatively, using GitHub Desktop and Spyder IDE, follow
+or using GitHub Desktop and Spyder IDE as follow:
 
 1. Download the repository on GitHub Desktop
 2. Run the following command in the Spyder console

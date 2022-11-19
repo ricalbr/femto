@@ -3,6 +3,7 @@ from collections import deque
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import zip_longest
+from operator import add
 from pathlib import Path
 
 import numpy as np
@@ -72,15 +73,18 @@ class PGMCompiler(GcodeParameters):
     def header(self):
         """
         The function print the header file of the G-Code file. The user can specify the fabrication line to work in
-        ``CAPABLE`` or ``FIRE LINE1`` as parameter when the G-Code Compiler obj is instantiated.
+        ``CAPABLE``, ``CARBIDE`` or ``FIRE LINE1`` as parameter when the G-Code Compiler obj is instantiated.
 
         :return: None
         """
-        if self.lab.upper() not in ['CAPABLE', 'FIRE']:
-            raise ValueError(f'Fabrication line should be CAPABLE or FIRE. Given {self.lab.upper()}.')
+        if self.lab.upper() not in ['CAPABLE', 'FIRE', 'CARBIDE']:
+            raise ValueError(f'Fabrication line should be CAPABLE, CARBIDE or FIRE. Given {self.lab.upper()}.')
 
         if self.lab.upper() == 'CAPABLE':
             with open(os.path.join(self.CWD, 'utils', 'header_capable.txt')) as fd:
+                self._instructions.extend(fd.readlines())
+        elif self.lab.upper() == 'CARBIDE':
+            with open(os.path.join(self.CWD, 'utils', 'header_carbide.txt')) as fd:
                 self._instructions.extend(fd.readlines())
         else:
             with open(os.path.join(self.CWD, 'utils', 'header_fire.txt')) as fd:
@@ -381,6 +385,7 @@ class PGMCompiler(GcodeParameters):
         :type points: numpy.ndarray
         :return: None
         """
+
         x_c, y_c, z_c, f_c, s_c = self.transform_points(points)
         args = [self._format_args(x, y, z, f) for (x, y, z, f) in zip(x_c, y_c, z_c, f_c)]
         for (arg, s) in zip_longest(args, s_c):
@@ -395,15 +400,55 @@ class PGMCompiler(GcodeParameters):
         self.dwell(self.long_pause)
 
     def transform_points(self, points):
-        x, y, z, f_c, s_c = points.T
-        sub_points = np.stack((x, y, z), axis=-1).astype(np.float32)
-        sub_points -= np.array([self.new_origin[0], self.new_origin[1], 0]).T
+        x, y, z, fc, sc = points.T
+        x, y, z = self.flip_path(x, y, z)
+        point_matrix = np.stack((x, y, z), axis=-1).astype(np.float32)
+        point_matrix -= np.array([self.new_origin[0], self.new_origin[1], 0]).T
         if self.warp_flag:
-            sub_points = np.matmul(sub_points, self.t_matrix())
-            x_c, y_c, z_c = self.compensate(sub_points).T
+            point_matrix = np.matmul(point_matrix, self.t_matrix())
+            x_c, y_c, z_c = self.compensate(point_matrix).T
         else:
-            x_c, y_c, z_c = np.matmul(sub_points, self.t_matrix()).T
-        return x_c, y_c, z_c, f_c, s_c
+            x_c, y_c, z_c = np.matmul(point_matrix, self.t_matrix()).T
+        return x_c, y_c, z_c, fc, sc
+
+    def flip_path(self, xc, yc, zc):
+        """
+        Flip the laser path along the x-, y- and z-coordinates
+        :return: None
+        """
+
+        flip_toggle = np.array([1, 1, 1])
+        # reverse the coordinates arrays to flip
+        if self.flip_x:
+            flip_toggle[0] = -1
+            xc = np.flip(xc)
+        if self.flip_y:
+            flip_toggle[1] = -1
+            yc = np.flip(yc)
+
+        # create flip matrix (+1 -> no flip, -1 -> flip)
+        flip_matrix = np.diag(flip_toggle)
+
+        # create the displacement matrix to map the transformed min/max coordinates to the original min/max coordinates)
+        points_matrix = np.array([xc, yc, zc])
+        displacements = np.array([self.samplesize[0] - self.new_origin[0],
+                                  self.samplesize[1] - self.new_origin[1],
+                                  0])
+        S = np.multiply((1 - flip_toggle) / 2, displacements)
+
+        # matrix multiplication and sum element-wise, add the displacement only to the flipped coordinates
+        flip_x, flip_y, flip_z = map(add, flip_matrix @ points_matrix, S)
+
+        # update coordinates
+        if self.flip_x:
+            xc = np.flip(flip_x)
+        else:
+            xc = flip_x
+        if self.flip_y:
+            yc = np.flip(flip_y)
+        else:
+            yc = flip_y
+        return xc, yc, zc
 
     def instruction(self, instr: str):
         """
@@ -735,7 +780,7 @@ class PGMTrench(PGMCompiler):
 
 
 def _example():
-    from femto import Waveguide
+    from femto import Waveguide, Cell
 
     # Data
     PARAMETERS_WG = dotdict(
@@ -744,16 +789,17 @@ def _example():
             radius=15,
             pitch=0.080,
             int_dist=0.007,
-            lsafe=3
+            lsafe=3,
+            samplesize=(25, 3),
     )
     increment = [PARAMETERS_WG.lsafe, 0, 0]
 
     PARAMETERS_GC = dotdict(
             filename='testPGMcompiler.pgm',
             lab='CAPABLE',
-            samplesize=(25, 25),
-            angle=0.0,
-            warp_flag=True,
+            samplesize=PARAMETERS_WG.samplesize,
+            rotation_angle=2.0,
+            flip_x=True,
     )
 
     # Calculations
@@ -762,8 +808,15 @@ def _example():
         wg.start([-2, -wg.pitch / 2 + i * wg.pitch, 0.035]) \
             .linear(increment) \
             .sin_mzi((-1) ** i * wg.dy_bend, arm_length=1.0) \
-            .linear(increment)
+            .sin_mzi((-1) ** i * wg.dy_bend, arm_length=1.0) \
+            .linear(increment) \
+            .sin_mzi((-1) ** i * wg.dy_bend, arm_length=1.0) \
+            .linear([wg.x_end, wg.lasty, wg.lastz], mode='ABS')
         wg.end()
+
+    c = Cell(PARAMETERS_GC)
+    c.append(coup)
+    c.plot2d()
 
     # Compilation
     with PGMCompiler(PARAMETERS_GC) as G:

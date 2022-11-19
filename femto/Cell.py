@@ -3,10 +3,8 @@ import time
 
 import numpy as np
 import plotly.graph_objects as go
-from shapely.affinity import rotate, translate
-from shapely.geometry import Point
 
-from femto import Marker, PGMCompiler, PGMTrench, Trench, TrenchColumn, Waveguide
+from femto import _Marker, _Waveguide, PGMCompiler, PGMTrench, Trench, TrenchColumn
 from femto.helpers import dotdict, listcast, nest_level
 
 
@@ -27,9 +25,9 @@ class Device(PGMCompiler):
             self.markers.extend(obj.markers)
             self.waveguides.extend(obj.waveguides)
             self.trenches.extend(obj.trenches)
-        elif isinstance(obj, Marker):
+        elif isinstance(obj, _Marker):
             self.markers.append(obj)
-        elif isinstance(obj, Waveguide) or (isinstance(obj, list) and all(isinstance(x, Waveguide) for x in obj)):
+        elif isinstance(obj, _Waveguide) or (isinstance(obj, list) and all(isinstance(x, _Waveguide) for x in obj)):
             self.waveguides.append(obj)
         elif isinstance(obj, Trench):
             self.trenches.append(obj)
@@ -99,10 +97,18 @@ class Device(PGMCompiler):
                                             line=mkargs,
                                             showlegend=False,
                                             hovertemplate='(%{x:.4f}, %{y:.4f})<extra>MK</extra>'))
+
         for tr in self.trenches:
-            shape = translate(tr.block, xoff=-self.new_origin[0], yoff=-self.new_origin[1])
-            shape = rotate(shape, angle=self.rotation_angle, use_radians=True, origin=Point(0, 0))
-            xt, yt = np.asarray(shape.exterior.coords.xy)
+            xt, yt = np.asarray(tr.block.exterior.coords.xy)
+            # Create (X,Y,Z,F,S) matrix for points transformation
+            xt = xt.reshape(-1, 1)
+            yt = yt.reshape(-1, 1)
+            dummy_p = np.empty(shape=(xt.shape[0], 3))  # dummy set of points for z, f, s cooridnates
+
+            pt = np.hstack((xt, yt, dummy_p)).astype(np.float32)
+
+            # transform set of points
+            xt, yt, *_ = self.transform_points(pt)
             self.fig.add_trace(go.Scattergl(x=xt, y=yt,
                                             fill='toself',
                                             **tcargs,
@@ -313,7 +319,7 @@ class Cell(Device):
             for bunch in self.waveguides:
                 with G.repeat(listcast(bunch)[0].scan):
                     for wg in listcast(bunch):
-                        _wg_fab_time += wg.wtime
+                        _wg_fab_time += wg.fabrication_time
                         G.write(wg.points)
             G.go_init()
         del G
@@ -342,7 +348,7 @@ class Cell(Device):
             for idx, bunch in enumerate(self.markers):
                 with G.repeat(listcast(bunch)[0].scan):
                     for mk in listcast(bunch):
-                        _mk_fab_time += mk.wtime
+                        _mk_fab_time += mk.fabrication_time
                         G.comment(f'MARKER {idx + 1}')
                         G.write(mk.points)
                         G.comment('')
@@ -363,7 +369,7 @@ class Cell(Device):
         if verbose:
             _tc_fab_time = 0.0
             for col in self.trench_cols:
-                _tc_fab_time += col.wtime
+                _tc_fab_time += col.fabrication_time
 
             print('G-code compilation completed.')
             print('Estimated fabrication time of the isolation trenches: ',
@@ -395,7 +401,7 @@ def _example():
     c = Cell(PARAMETERS_GC)
 
     # Calculations
-    mzi = [Waveguide(PARAMETERS_WG) for _ in range(2)]
+    mzi = [_Waveguide(PARAMETERS_WG) for _ in range(2)]
     y0 = PARAMETERS_GC.samplesize[1] / 2
     for index, wg in enumerate(mzi):
         [xi, yi, zi] = [-2, -wg.pitch / 2 + index * wg.pitch + y0, 0.035]
