@@ -368,6 +368,13 @@ class GcodeParameters:
     @property
     def neff(self) -> float:
         return self.n_glass / self.n_environment
+    
+    @property
+    def PSO_shutter_label(self) -> chr:
+        if  self.lab.upper() == 'ANT':
+            return 'Z'
+        else:
+            return 'X'
 
     @property
     def tshutter(self) -> float:
