@@ -1,3 +1,5 @@
+;Setup Capable - Pharos laser
+
 ENABLE X Y Z
 METRIC
 SECONDS
