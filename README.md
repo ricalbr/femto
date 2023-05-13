@@ -28,6 +28,7 @@ The optical components can be plotted and exported to a .pgm file for the fabric
 
 - [Installation](#installation)
 - [Usage](#usage)
+- [Documentation](#documentation)
 - [Issues](#issues)
 <!-- * [License](#license) -->
 
@@ -133,6 +134,7 @@ Other example files can be found [here](https://github.com/ricalbr/femto/tree/ma
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Documentation
+
 The complete documentation can be found [here](https://femto.readthedocs.io/en/latest/).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
