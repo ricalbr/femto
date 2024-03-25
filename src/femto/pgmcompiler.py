@@ -59,9 +59,9 @@ class PGMCompiler:
         self._loaded_files: list[str] = []
         self._dvars: list[str] = []
 
-        self.fwarp: Callable[
-            [npt.NDArray[np.float32], npt.NDArray[np.float32]], npt.NDArray[np.float32]
-        ] = self.warp_management(self.warp_flag)
+        self.fwarp: Callable[[npt.NDArray[np.float32], npt.NDArray[np.float32]], npt.NDArray[np.float32]] = (
+            self.warp_management(self.warp_flag)
+        )
 
         # Set rotation angle in radians for matrix rotations
         if self.rotation_angle:
@@ -745,7 +745,7 @@ class PGMCompiler:
 
         # Convert points if G-Code commands
         args = [self._format_args(x, y, z, f) for (x, y, z, f) in zip(x_gc, y_gc, z_gc, f_gc)]
-        for (arg, s) in itertools.zip_longest(args, s_gc):
+        for arg, s in itertools.zip_longest(args, s_gc):
             if s == 0 and self._shutter_on is True:
                 self.instruction('\n')
                 self.dwell(self.short_pause)
