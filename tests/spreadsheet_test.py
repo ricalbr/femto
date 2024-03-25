@@ -1,17 +1,18 @@
 from __future__ import annotations
-from femto import __file__ as fpath
+
+from contextlib import nullcontext as does_not_raise
+from itertools import product
+from pathlib import Path
 
 import numpy as np
+import openpyxl
 import pytest
+from femto import __file__ as fpath
 from femto.device import Device
 from femto.helpers import dotdict
 from femto.marker import Marker
 from femto.spreadsheet import Spreadsheet
-from itertools import product
 from femto.waveguide import Waveguide
-from pathlib import Path
-import openpyxl
-from contextlib import nullcontext as does_not_raise
 
 src_path = Path(fpath).parent
 dot_path = Path('.').cwd()
@@ -59,7 +60,7 @@ def list_wg() -> list[Waveguide]:
 def list_mk() -> list[Marker]:
     PARAM_MK = dotdict(scan=1, speed=2, speed_pos=5, speed_closed=5, depth=0.000, lx=1, ly=1)
     markers = []
-    for (x, y) in zip(range(4, 8), range(3, 7)):
+    for x, y in zip(range(4, 8), range(3, 7)):
         m = Marker(**PARAM_MK)
         m.cross([x, y])
         markers.append(m)
