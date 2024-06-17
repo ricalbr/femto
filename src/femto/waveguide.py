@@ -408,9 +408,7 @@ class Waveguide(LaserPath):
 
         x_sin = np.linspace(self._x[-1], self._x[-1] + dx, num)
         tmp_cos = np.cos(omega_y * np.pi / dx * (x_sin - self._x[-1]))
-        y_sin = self._y[-1] + 0.5 * dy * (
-            1 - np.sqrt((1 + flat_peaks**2) / (1 + flat_peaks**2 * tmp_cos**2)) * tmp_cos
-        )
+        y_sin = self._y[-1] + 0.5 * dy * (1 - np.sqrt((1 + flat_peaks**2) / (1 + flat_peaks**2 * tmp_cos**2)) * tmp_cos)
         z_sin = self._z[-1] + 0.5 * dzb * (1 - np.cos(omega_z * np.pi / dx * (x_sin - self._x[-1])))
         f_sin = np.repeat(f, num)
         s_sin = np.repeat(shutter, num)
