@@ -831,6 +831,10 @@ class PGMCompiler:
         y = np.asarray(y, dtype=np.float32)
         z = np.asarray(z, dtype=np.float32)
 
+        # compensate for glass warp
+        if self.warp_flag:
+            x, y, z = self.compensate(x, y, z)
+
         # translate points to new origin
         x -= self.shift_origin[0]
         y -= self.shift_origin[1]
@@ -840,12 +844,7 @@ class PGMCompiler:
 
         # rotate points
         point_matrix = np.stack((x, y, z), axis=-1)
-        x_t, y_t, z_t = np.matmul(point_matrix, self.t_matrix).T
-
-        # compensate for glass warp
-        if self.warp_flag:
-            return self.compensate(x_t, y_t, z_t)
-        return x_t, y_t, z_t
+        return np.matmul(point_matrix, self.t_matrix).T
 
     def flip(
         self,
@@ -906,7 +905,7 @@ class PGMCompiler:
         z_comp = copy.deepcopy(np.array(z))
 
         xy = np.column_stack([x_comp, y_comp])
-        zwarp = np.array(self.fwarp(xy), dtype=np.float32)
+        zwarp = np.array(self.fwarp(xy), dtype=np.float32).reshape(z_comp.shape)
         z_comp += zwarp
 
         return x_comp, y_comp, z_comp

@@ -1160,7 +1160,7 @@ def test_t_matrix_matrix(param, angle, res) -> None:
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([2, -10, -10, -28]),
             np.array([5, 5, 16, 16]),
-            np.array([-0.001, -0.001, -0.001, -0.001]),
+            np.array([-0.0022167,  0.0084233,  0.007448 ,  0.023408 ]),
         ),
         (
             False,
@@ -1172,13 +1172,14 @@ def test_t_matrix_matrix(param, angle, res) -> None:
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([-1.9124334, 10.085739, 13.1376393, 34.2740601]),
             np.array([-5.0341433, -4.8247144, -7.7719003, -15.4041813]),
-            np.array([-0.001, -0.001, -0.001, -0.001]),
+            np.array([-0.0022167,  0.0084233,  0.0108173,  0.028728 ]),
         ),
     ],
 )
 def test_transform_points_(param, xflip, yflip, warpf, angle, xin, yin, zin, xo, yo, zo) -> None:
     def fun(h):
-        return -1e-3
+        a = np.array([[1e-3], [-1e-4]]).T
+        return np.matmul(a, h.T).flatten()
 
     file = Path.cwd() / 'fwarp.pkl'
     if not file.is_file():
