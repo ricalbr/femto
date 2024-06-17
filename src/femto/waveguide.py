@@ -5,10 +5,8 @@ import functools
 from typing import Any
 
 import numpy as np
-import numpy.typing as npt
 from femto.helpers import dotdict
 from femto.laserpath import LaserPath
-from scipy import interpolate
 
 
 @dataclasses.dataclass(repr=False)
