@@ -906,7 +906,7 @@ class PGMCompiler:
 
         xy = np.column_stack([x_comp, y_comp])
         zwarp = np.array(self.fwarp(xy), dtype=np.float32).reshape(z_comp.shape)
-        z_comp += zwarp
+        z_comp += zwarp * self.neff
 
         return x_comp, y_comp, z_comp
 
