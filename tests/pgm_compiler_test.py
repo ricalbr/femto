@@ -1117,7 +1117,9 @@ def test_compensate(param, x, y, z) -> None:
 
     G = PGMCompiler(**param)
     xc, yc, zc = G.compensate(x, y, z)
-    zfun = z + np.array([fun(np.array([xp, yp]).T) for (xp, yp) in zip(x, y)]) * (param['n_glass'] / param['n_environment'])
+    zfun = z + np.array([fun(np.array([xp, yp]).T) for (xp, yp) in zip(x, y)]) * (
+        param['n_glass'] / param['n_environment']
+    )
 
     np.testing.assert_array_equal(xc, x)
     np.testing.assert_array_equal(yc, y)
@@ -1163,16 +1165,16 @@ def test_t_matrix_matrix(param, angle, res) -> None:
             np.array([-0.0025, 0.0095, 0.0084, 0.0264]),
         ),
         (
-                True,
-                False,
-                True,
-                0.0,
-                np.array([-2, 10, 10, 28]),
-                np.array([5, 5, 16, 16]),
-                np.array([0.001, 0.002, 0.003, 0.004]),
-                np.array([2, -10, -10, -28]),
-                np.array([5, 5, 16, 16]),
-                np.array([-0.0016133, 0.0112733, 0.01106, 0.0299467]),
+            True,
+            False,
+            True,
+            0.0,
+            np.array([-2, 10, 10, 28]),
+            np.array([5, 5, 16, 16]),
+            np.array([0.001, 0.002, 0.003, 0.004]),
+            np.array([2, -10, -10, -28]),
+            np.array([5, 5, 16, 16]),
+            np.array([-0.0016133, 0.0112733, 0.01106, 0.0299467]),
         ),
         (
             False,
@@ -1184,7 +1186,7 @@ def test_t_matrix_matrix(param, angle, res) -> None:
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([-1.9124334, 10.085739, 13.1376393, 34.2740601]),
             np.array([-5.0341433, -4.8247144, -7.7719003, -15.4041813]),
-            np.array([-0.0025,  0.0095,  0.0122,  0.0324]),
+            np.array([-0.0025, 0.0095, 0.0122, 0.0324]),
         ),
     ],
 )
