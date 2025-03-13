@@ -34,7 +34,7 @@ class Trench:
         self.block: geometry.Polygon = block  #: Polygon shape of the trench.
         self.delta_floor: float = delta_floor  #: Offset distance between buffered polygons in the trench toolpath.
         self.height: float = height  #: Depth of the trench box.
-        self.safe_inner_turns: int = safe_inner_turns  #: Number of spiral turns befor zig-zag filling
+        self.safe_inner_turns: int = safe_inner_turns  #: Number of spiral turns before zig-zag filling
 
         self._floor_length: float = 0.0  #: Length of the floor path.
         self._wall_length: float = 0.0  #: Length of the wall path.
@@ -68,7 +68,7 @@ class Trench:
         return bool(self.yborder[0] >= other.yborder[0])
 
     @property
-    def border(self) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+    def border(self) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Border of the trench.
 
         It returns the border of the block as a tuple of two numpy arrays, one for the `x` coordinates and one for
@@ -80,10 +80,10 @@ class Trench:
             `x` and `y`-coordinates arrays of the trench border.
         """
         xx, yy = self.block.exterior.coords.xy
-        return np.asarray(xx, dtype=np.float32), np.asarray(yy, dtype=np.float32)
+        return np.asarray(xx, dtype=np.float64), np.asarray(yy, dtype=np.float64)
 
     @property
-    def xborder(self) -> npt.NDArray[np.float32]:
+    def xborder(self) -> npt.NDArray[np.float64]:
         """`x`-coordinates of the trench border.
 
         Returns
@@ -95,7 +95,7 @@ class Trench:
         return x
 
     @property
-    def yborder(self) -> npt.NDArray[np.float32]:
+    def yborder(self) -> npt.NDArray[np.float64]:
         """`y`-coordinates of the trench border.
 
         Returns
@@ -188,7 +188,7 @@ class Trench:
 
             # Internal rectangle
             buffer_length = 2 * self.delta_floor
-            p = np.array([[[x, y] for (x, y) in self.block.buffer(-buffer_length).exterior.coords]], np.float32) * 1e3
+            p = np.array([[[x, y] for (x, y) in self.block.buffer(-buffer_length).exterior.coords]], np.float64) * 1e3
             xmin_int, ymin_int, dx_int, dy_int = lir.lir(p.astype(np.int32), np.int32) / 1e3
             xmax_int, ymax_int = xmin_int + dx_int, ymin_int + dy_int
 
@@ -237,7 +237,7 @@ class Trench:
                 coords.extend([((xmax, ymin + (i + 1) * self.delta_floor), (xmin, ymin + (i + 1) * self.delta_floor))])
         return geometry.MultiLineString(coords)
 
-    def zigzag(self, poly: geometry.Polygon) -> npt.NDArray[np.float32]:
+    def zigzag(self, poly: geometry.Polygon) -> npt.NDArray[np.float64]:
         """Zig-zag filling pattern.
         The function `zigzag` takes a polygon as input, applies a zig-zag filling pattern to it, and returns the
         coordinates of the resulting zigzag pattern.
@@ -261,7 +261,7 @@ class Trench:
             coords.extend(line.coords)
         return np.array(coords).T
 
-    def toolpath(self) -> Generator[npt.NDArray[np.float32], None, None]:
+    def toolpath(self) -> Generator[npt.NDArray[np.float64], None, None]:
         """Toolpath generator.
 
         The function takes a polygon and computes the filling toolpath.
@@ -319,7 +319,7 @@ class Trench:
         -------
         list(geometry.Polygon)
             List of buffered polygons. If the buffered polygon is still a ``Polyon`` object the list contains just a
-            single polygon. If the buffered polygon is ``MultiPolygon``, the list contais all the single ``Polygon``
+            single polygon. If the buffered polygon is ``MultiPolygon``, the list contains all the single ``Polygon``
             objects that compose the multipolygon. Finally, if the buffered polygon cannot be computed the list
             contains just the empty polygon ``Polygon()``.
 
@@ -357,13 +357,13 @@ class TrenchColumn:
     y_min: float  #: Minimum `y` coordinates of the trench blocks [mm].
     y_max: float  #: Maximum `y` coordinates of the trench blocks [mm].
     bridge: float = 0.026  #: Separation length between nearby trench blocks [mm].
-    length: float = 1  #: Lenght of the trench along the `x` axis [mm].
+    length: float = 1  #: Length of the trench along the `x` axis [mm].
     h_box: float = 0.075  #: Height of the single trench box [mm].
     nboxz: int = 4  #: Number of stacked box along the `z` axis.
     z_off: float = -0.020  #: Starting offset in `z` with respect to the sample's surface [mm].
     deltaz: float = 0.0015  #: Offset distance between countors paths of the trench wall [mm].
     delta_floor: float = 0.001  #: Offset distance between buffered polygons in the trench toolpath [mm].
-    safe_inner_turns: int = 5  #: Number of spiral turns befor zig-zag filling
+    safe_inner_turns: int = 5  #: Number of spiral turns before zig-zag filling
     u: list[float] | None = None  #: List of U coordinate to change irradiation power automatically [deg].
     speed_wall: float = 4.0  #: Translation speed of the wall section [mm/s].
     speed_floor: float | None = None  #: Translation speed of the floor section [mm/s].
@@ -498,7 +498,7 @@ class TrenchColumn:
         The function uses a list of ``Waveguide`` objects as a mold to define the trench shapes. It populates
         `self.trech_list` with ``Trench`` objects.
         If some of the generated trenches are not needed they can be removed from the list is a ``remove`` list of
-        indeces is given as input. Trenches are numbered such that the one with lowest `y` coordinate has index 0,
+        indices is given as input. Trenches are numbered such that the one with lowest `y` coordinate has index 0,
         the one with second-lowest `y` coordinate has index 1 and so on. If ``remove`` is empty or ``None`` all the
         generated trenches are added to the `self.trench_list`.
 
@@ -527,7 +527,7 @@ class TrenchColumn:
 
     def dig_from_array(
         self,
-        waveguides: list[npt.NDArray[np.float32]],
+        waveguides: list[npt.NDArray[np.float64]],
         remove: list[int] | None = None,
     ) -> None:
         """Dig trenches from array-like input.
@@ -535,7 +535,7 @@ class TrenchColumn:
         The function uses a list of `array-like` objects as a mold to define the trench shapes. It populates
         `self.trech_list` with ``Trench`` objects.
         If some of the generated trenches are not needed they can be removed from the list is a ``remove`` list of
-        indeces is given as input. Trenches are numbered such that the one with lowest `y` coordinate has index 0,
+        indices is given as input. Trenches are numbered such that the one with lowest `y` coordinate has index 0,
         the one with second-lowest `y` coordinate has index 1 and so on. If ``remove`` is empty or ``None`` all the
         generated trenches are added to the `self.trench_list`.
 

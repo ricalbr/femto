@@ -77,17 +77,17 @@ class Marker(LaserPath):
 
     def ruler(
         self,
-        y_ticks: list[float] | npt.NDArray[np.float32],
+        y_ticks: list[float] | npt.NDArray[np.float64],
         lx: float | None = None,
         lx2: float | None = None,
         x_init: float | None = None,
     ) -> None:
         """Ticks marker.
 
-        Draws a serie of horizontal ablation lines parallel to the `x` axis. The `y`-coordinates of the ticks are
+        Draws a series of horizontal ablation lines parallel to the `x` axis. The `y`-coordinates of the ticks are
         given as input.
 
-        y_ticks : array-like, list[float], npt.NDArray[np.float32]
+        y_ticks : array-like, list[float], npt.NDArray[np.float64]
             List of `y`-coordinate values for each tick in the marker.
         lx : float, optional
             Length of the longer tick marks [mm]. The default value is ``self.lx``.

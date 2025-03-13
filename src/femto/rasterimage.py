@@ -13,7 +13,7 @@ from PIL import Image
 class RasterImage(LaserPath):
     """Class representing a laser path in the xy-plane of a b/w rastered image."""
 
-    px_to_mm: float = 0.01  # pixel to millimeter scale convertion
+    px_to_mm: float = 0.01  # pixel to millimeter scale conversion
     img_size: tuple[int, int] = (0, 0)
 
     def __post_init__(self) -> None:
@@ -77,11 +77,11 @@ class RasterImage(LaserPath):
 
             # add a path for each sub-split with open shutter
             for x_split in x_open_shutter:
-                x_row = np.array([x_split[0], x_split[0], x_split[-1], x_split[-1], x_split[0]], dtype=np.float32)
-                y_row = y_val * np.ones_like(x_row, dtype=np.float32)
-                z_row = z_val * np.ones_like(x_row, dtype=np.float32)
+                x_row = np.array([x_split[0], x_split[0], x_split[-1], x_split[-1], x_split[0]], dtype=np.float64)
+                y_row = y_val * np.ones_like(x_row, dtype=np.float64)
+                z_row = z_val * np.ones_like(x_row, dtype=np.float64)
                 f_row = np.array(
-                    [self.speed_closed, self.speed, self.speed, self.speed_closed, self.speed_closed], dtype=np.float32
+                    [self.speed_closed, self.speed, self.speed, self.speed_closed, self.speed_closed], dtype=np.float64
                 )
                 s_row = np.array([0, 1, 1, 0, 0], dtype=int)
 

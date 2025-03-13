@@ -169,7 +169,7 @@ def sign() -> Iterator[int]:
 
 
 # Filtering adjacent identical points from a list of arrays.
-def unique_filter(arrays: list[npt.NDArray[np.float32]]) -> npt.NDArray[np.float32]:
+def unique_filter(arrays: list[npt.NDArray[np.float64]]) -> npt.NDArray[np.float64]:
     """Remove duplicate subsequent points.
 
     It takes a list of numpy arrays and returns a numpy array of unique rows. At least one coordinate have to
@@ -225,7 +225,7 @@ def unique_filter(arrays: list[npt.NDArray[np.float32]]) -> npt.NDArray[np.float
     if len(arrays) == 1:
         data = arrays[0]
     else:
-        data = np.stack(arrays, axis=-1).astype(np.float32)
+        data = np.stack(arrays, axis=-1).astype(np.float64)
     data.reshape(-1, len(arrays))
 
     # mask
@@ -246,7 +246,7 @@ def split_mask(arr: npt.NDArray[Any], mask: npt.NDArray[np.generic]) -> list[npt
     """
     Splits an array into sub-arrays based on a mask.
 
-     The function return the list of sub-arrays correspoding to True values.
+     The function return the list of sub-arrays corresponding to True values.
 
     :param arr: Input array
     :param mask: Boolean array used as mask to split the input array

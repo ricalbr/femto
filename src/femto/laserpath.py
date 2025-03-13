@@ -35,11 +35,11 @@ class LaserPath:
     end_off_sample: bool = True  #: Flag to end laserpath off of the sample. (See `x_end`).
     warp_flag: bool = False  #: Flag to toggle the glass warp compensation.
 
-    _x: npt.NDArray[np.float32] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float32))
-    _y: npt.NDArray[np.float32] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float32))
-    _z: npt.NDArray[np.float32] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float32))
-    _f: npt.NDArray[np.float32] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float32))
-    _s: npt.NDArray[np.float32] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float32))
+    _x: npt.NDArray[np.float64] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float64))
+    _y: npt.NDArray[np.float64] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float64))
+    _z: npt.NDArray[np.float64] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float64))
+    _f: npt.NDArray[np.float64] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float64))
+    _s: npt.NDArray[np.float64] = dataclasses.field(default_factory=lambda: np.array([], dtype=np.float64))
 
     def __post_init__(self) -> None:
         if not isinstance(self.scan, int):
@@ -129,7 +129,7 @@ class LaserPath:
             return self.samplesize[0] - self.lsafe
 
     @property
-    def points(self) -> npt.NDArray[np.float32]:
+    def points(self) -> npt.NDArray[np.float64]:
         """Matrix of the unique points in the trajectory.
 
         The matrix of points is parsed through a unique functions that removes all the subsequent identical points in
@@ -148,7 +148,7 @@ class LaserPath:
         return np.array(unique_filter([self._x, self._y, self._z, self._f, self._s]))
 
     @property
-    def x(self) -> npt.NDArray[np.float32]:
+    def x(self) -> npt.NDArray[np.float64]:
         """`x`-coordinate vector as a numpy array.
 
         The subsequent identical points in the vector are removed.
@@ -184,7 +184,7 @@ class LaserPath:
         return None
 
     @property
-    def y(self) -> npt.NDArray[np.float32]:
+    def y(self) -> npt.NDArray[np.float64]:
         """`y`-coordinate vector as a numpy array.
 
         The subsequent identical points in the vector are removed.
@@ -220,7 +220,7 @@ class LaserPath:
         return None
 
     @property
-    def z(self) -> npt.NDArray[np.float32]:
+    def z(self) -> npt.NDArray[np.float64]:
         """`z`-coordinate vector as a numpy array.
 
         The subsequent identical points in the vector are removed.
@@ -256,7 +256,7 @@ class LaserPath:
         return None
 
     @property
-    def lastpt(self) -> npt.NDArray[np.float32]:
+    def lastpt(self) -> npt.NDArray[np.float64]:
         """Last point of the laser path, if any.
 
         Returns
@@ -270,7 +270,7 @@ class LaserPath:
         return np.array([])
 
     @property
-    def path(self) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+    def path(self) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """List of `x` and `y`-coordinates of the laser path written with open shutter.
 
         Returns
@@ -287,7 +287,7 @@ class LaserPath:
         return x, y
 
     @property
-    def path3d(self) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+    def path3d(self) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """List of `x`, `y` and `z`-coordinates of the laser path written with open shutter.
 
         It takes the `x`, `y` and `z`, and shutter values `s` values from the path trajectory and filters out the
@@ -331,7 +331,7 @@ class LaserPath:
         """Total fabrication time in seconds.
 
         It takes the x, y and z of the laser path and calculates the distance between each point and the next,
-        computes the element-wise divison between that distance and the f values of the path to get the time it takes
+        computes the element-wise division between that distance and the f values of the path to get the time it takes
         to travel that distance. Finally, it sums all the contribution to get the total fabrication time.
 
         Returns
@@ -350,7 +350,7 @@ class LaserPath:
         return float(sum(times))
 
     @property
-    def curvature_radius(self) -> npt.NDArray[np.float32]:
+    def curvature_radius(self) -> npt.NDArray[np.float64]:
         """Point-to-point curvature radius of the trajectory.
 
         The curvature radius is computed as the radius of the circle that best fits the curve at a given point.
@@ -379,7 +379,7 @@ class LaserPath:
         )
 
     @property
-    def cmd_rate(self) -> npt.NDArray[np.float32]:
+    def cmd_rate(self) -> npt.NDArray[np.float64]:
         """Point-to-point command rate of the laser path.
 
         Returns
@@ -399,7 +399,7 @@ class LaserPath:
         # only divide nonzeros else Inf
         default_zero = np.zeros(np.size(dt))
         cmd_rate = np.divide(f, dt, out=default_zero, where=(dt != 0))
-        return np.array(cmd_rate, dtype=np.float32)
+        return np.array(cmd_rate, dtype=np.float64)
 
     # Methods
     def start(self, init_pos: list[float] | None = None, speed_pos: float | None = None) -> LaserPath:
@@ -467,11 +467,11 @@ class LaserPath:
 
     def add_path(
         self,
-        x: npt.NDArray[np.float32],
-        y: npt.NDArray[np.float32],
-        z: npt.NDArray[np.float32],
-        f: npt.NDArray[np.float32],
-        s: npt.NDArray[np.float32],
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        z: npt.NDArray[np.float64],
+        f: npt.NDArray[np.float64],
+        s: npt.NDArray[np.float64],
     ):
         """Appends the given arrays to the end of the existing coordinates.
 
@@ -492,11 +492,11 @@ class LaserPath:
         -------
         None
         """
-        self._x = np.append(self._x, x.astype(np.float32))
-        self._y = np.append(self._y, y.astype(np.float32))
-        self._z = np.append(self._z, z.astype(np.float32))
-        self._f = np.append(self._f, f.astype(np.float32))
-        self._s = np.append(self._s, s.astype(np.float32))
+        self._x = np.append(self._x, x.astype(np.float64))
+        self._y = np.append(self._y, y.astype(np.float64))
+        self._z = np.append(self._z, z.astype(np.float64))
+        self._f = np.append(self._f, f.astype(np.float64))
+        self._s = np.append(self._s, s.astype(np.float64))
 
     def linear(
         self,
@@ -598,7 +598,7 @@ class LaserPath:
         filename: str
             Name of (or path to) the file to be saved.
         as_dict: bool, optional
-            Flag varibale to export the object as dictionary. The default value is False.
+            Flag variable to export the object as dictionary. The default value is False.
 
         Returns
         -------

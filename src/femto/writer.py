@@ -485,14 +485,14 @@ class TrenchWriter(Writer):
     def export_array2d(
         self,
         filename: pathlib.Path,
-        x: npt.NDArray[np.float32],
-        y: npt.NDArray[np.float32],
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
         speed: float | list[float],
         forced_deceleration: bool | list[bool] | npt.NDArray[np.bool] = False,
     ) -> None:
         """Export 2D path to PGM file.
 
-        Helper function that produces a series of movements at given traslation speed and without shuttering
+        Helper function that produces a series of movements at given translation speed and without shuttering
         operations for a 2D point matrix.
         The function parse the points input points, applies the rotation and homothety transformations and parse all
         the ``LINEAR`` instructions.
@@ -703,7 +703,7 @@ class TrenchWriter(Writer):
         for tr in self.trenches:
             # get points and transform them
             xt, yt = tr.border
-            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float32))
+            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float64))
 
             fig.add_trace(
                 go.Scattergl(
@@ -726,7 +726,7 @@ class TrenchWriter(Writer):
         for tr in self.trenches:
             # get points and transform them
             xt, yt = tr.border
-            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float32))
+            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float64))
 
             x = np.array([xt, xt])
             y = np.array([yt, yt])
@@ -963,7 +963,7 @@ class UTrenchWriter(TrenchWriter):
         utcargs = {**default_utcargs, **style}
         for bd in self.beds:
             xt, yt = bd.border
-            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float32))
+            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float64))
 
             fig.add_trace(
                 go.Scattergl(
@@ -987,7 +987,7 @@ class UTrenchWriter(TrenchWriter):
         for tr in self.trenches:
             # get points and transform them
             xt, yt = tr.border
-            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float32))
+            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float64))
 
             x = np.array([xt, xt])
             y = np.array([yt, yt])
@@ -1018,7 +1018,7 @@ class UTrenchWriter(TrenchWriter):
                 )
         for bd in self.beds:
             xt, yt = bd.border
-            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float32))
+            xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float64))
 
             x = np.array([xt, xt])
             y = np.array([yt, yt])

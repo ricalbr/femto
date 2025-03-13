@@ -33,9 +33,9 @@ class PGMCompiler:
     laser: str = 'PHAROS'  #: Name of the laser source.
     export_dir: str = ''  #: Directory in which the G-Code files will be exported.
     n_glass: float = 1.50  #: Sample glass refractive index.
-    n_environment: float = 1.33  #: Environment refractive index. The defualt is for water immersion fabrications.
+    n_environment: float = 1.33  #: Environment refractive index. The default is for water immersion fabrications.
     samplesize: tuple[float, float] = (100, 50)  #: (`x`, `y`) sizes of the fabrication sample, `[mm]`.
-    shift_origin: tuple[float, float] = (0.0, 0.0)  #: Shift the cooordinates of the origin to this new point.
+    shift_origin: tuple[float, float] = (0.0, 0.0)  #: Shift the coordinates of the origin to this new point.
     rotation_angle: float = 0.0  #: Physical rotation angle, objects are geometrically rotated by this angle.
     aerotech_angle: float = 0.0  #: Part rotation angle `(G84)`.
     long_pause: float = 0.5  #: Long DWELL pause, `[s]`.
@@ -60,7 +60,7 @@ class PGMCompiler:
         self._dvars: list[str] = []
 
         self.fwarp: Callable[
-            [npt.NDArray[np.float32], npt.NDArray[np.float32]], npt.NDArray[np.float32]
+            [npt.NDArray[np.float64], npt.NDArray[np.float64]], npt.NDArray[np.float64]
         ] = self.warp_management(self.warp_flag)
 
         # Set rotation angle in radians for matrix rotations
@@ -361,7 +361,7 @@ class PGMCompiler:
     def set_home(self, home_pos: list[float]) -> None:
         """Set coordinates of present position.
 
-        The user can set the current Aerotech postition to a particular set of coordinates, given as an input list.
+        The user can set the current Aerotech position to a particular set of coordinates, given as an input list.
         A variable can be excluded if set to ``None``. The function can be used to set a user-defined home position.
 
         Parameters
@@ -487,7 +487,7 @@ class PGMCompiler:
             raise ValueError("Number of iterations is 0. Set 'scan'>= 1.")
 
         if var is None:
-            raise ValueError('Given variable is None. Give a valid varible.')
+            raise ValueError('Given variable is None. Give a valid variable.')
         if var.lower() not in self._dvars:
             raise ValueError(f'Given variable has not beed declared. Use dvar() method to declare ${var} variable.')
 
@@ -724,7 +724,7 @@ class PGMCompiler:
             self.dwell(self.short_pause)
             self.instruction('\n\n')
 
-    def write(self, points: npt.NDArray[np.float32]) -> None:
+    def write(self, points: npt.NDArray[np.float64]) -> None:
         """
         The function convert the quintuple (X,Y,Z,F,S) to G-Code instructions. The (X,Y,Z) coordinates are
         transformed using the transformation matrix that takes into account the rotation of a given rotation_angle
@@ -767,7 +767,7 @@ class PGMCompiler:
         """Close and export a G-Code file.
 
         The functions writes all the instructions in a .pgm file. The filename is specified during the class
-        instatiation. If no extension is present, the proper one is automatically added.
+        instantiation. If no extension is present, the proper one is automatically added.
 
         Parameters
         ----------
@@ -802,10 +802,10 @@ class PGMCompiler:
     # Geometrical transformations
     def transform_points(
         self,
-        x: npt.NDArray[np.float32],
-        y: npt.NDArray[np.float32],
-        z: npt.NDArray[np.float32],
-    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        z: npt.NDArray[np.float64],
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Transform points.
 
         The function takes in a set of points and apply a set of geometrical transformation (flip, translation,
@@ -827,9 +827,9 @@ class PGMCompiler:
         """
 
         # normalize data
-        x = np.asarray(x, dtype=np.float32)
-        y = np.asarray(y, dtype=np.float32)
-        z = np.asarray(z, dtype=np.float32)
+        x = np.asarray(x, dtype=np.float64)
+        y = np.asarray(y, dtype=np.float64)
+        z = np.asarray(z, dtype=np.float64)
 
         # compensate for glass warp
         if self.warp_flag:
@@ -848,9 +848,9 @@ class PGMCompiler:
 
     def flip(
         self,
-        xc: npt.NDArray[np.float32],
-        yc: npt.NDArray[np.float32],
-    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+        xc: npt.NDArray[np.float64],
+        yc: npt.NDArray[np.float64],
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Flip path.
 
         Flip the laser path along the `x` and `y` coordinates.
@@ -877,10 +877,10 @@ class PGMCompiler:
 
     def compensate(
         self,
-        x: npt.NDArray[np.float32],
-        y: npt.NDArray[np.float32],
-        z: npt.NDArray[np.float32],
-    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        z: npt.NDArray[np.float64],
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Warp compensation.
 
         Returns the `z`-compensated points for the glass warp using ``self.fwarp`` function.
@@ -905,13 +905,13 @@ class PGMCompiler:
         z_comp = copy.deepcopy(np.array(z))
 
         xy = np.column_stack([x_comp, y_comp])
-        zwarp = np.array(self.fwarp(xy), dtype=np.float32).reshape(z_comp.shape)
+        zwarp = np.array(self.fwarp(xy), dtype=np.float64).reshape(z_comp.shape)
         z_comp += zwarp * self.neff
 
         return x_comp, y_comp, z_comp
 
     @property
-    def t_matrix(self) -> npt.NDArray[np.float32]:
+    def t_matrix(self) -> npt.NDArray[np.float64]:
         """Composition of `xy` rotation matrix and `z` refractive index compensation.
 
         Given the rotation rotation_angle and the refractive index, the function compute the transformation matrix as
@@ -949,7 +949,7 @@ class PGMCompiler:
         corrected).
         If ``opt`` is ``True``, the method look will load a function given by the interpolation of the points
         measured experimentally saved in a POS.txt file  containing a mapping of the surface of the sample. If a
-        compensating function is already present in the current working direcoty, the method will just load that
+        compensating function is already present in the current working directory, the method will just load that
         function without interpolating all the points from scratch.
 
         Notes
@@ -1005,7 +1005,7 @@ class PGMCompiler:
     ) -> interpolate.RBFInterpolator:
         """Warp Generation
 
-        The method load the smapled points contained in the POS.txt file and finds a surface that interpolates them
+        The method load the sampled points contained in the POS.txt file and finds a surface that interpolates them
         using the RBF interpolator.
         The ``show`` flag allows to plot the surface for debugging or inspection purposes.
 
@@ -1190,8 +1190,8 @@ def sample_warp(pts_x: int, pts_y: int, margin: float, parameters: dict(str, Any
 
 
 def main() -> None:
-    from femto.waveguide import Waveguide
     from femto.helpers import dotdict
+    from femto.waveguide import Waveguide
 
     # Parameters
     PARAM_WG = dotdict(scan=6, speed=20, radius=15, pitch=0.080, int_dist=0.007, lsafe=3, samplesize=(25, 25))
