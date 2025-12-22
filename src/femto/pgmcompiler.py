@@ -59,9 +59,9 @@ class PGMCompiler:
         self._loaded_files: list[str] = []
         self._dvars: list[str] = []
 
-        self.fwarp: Callable[
-            [npt.NDArray[np.float64], npt.NDArray[np.float64]], npt.NDArray[np.float64]
-        ] = self.warp_management(self.warp_flag)
+        self.fwarp: Callable[[npt.NDArray[np.float64], npt.NDArray[np.float64]], npt.NDArray[np.float64]] = (
+            self.warp_management(self.warp_flag)
+        )
 
         # Set rotation angle in radians for matrix rotations
         if self.rotation_angle:
@@ -444,7 +444,7 @@ class PGMCompiler:
         self.move_to([-2, 0, 0])
 
     @contextlib.contextmanager
-    def axis_rotation(self, angle: float | None = None) -> Generator[PGMCompiler, None, None]:
+    def axis_rotation(self, angle: float | None = None) -> Generator[PGMCompiler]:
         """Aerotech axis rotation (G84).
 
         Context manager for the G84 command. The user can specify the angle (in degree) of the axis rotation.
@@ -465,7 +465,7 @@ class PGMCompiler:
             self._exit_axis_rotation()
 
     @contextlib.contextmanager
-    def for_loop(self, var: str, num: int) -> Generator[PGMCompiler, None, None]:
+    def for_loop(self, var: str, num: int) -> Generator[PGMCompiler]:
         """Foor loop instruction.
 
         Context manager that manages a ``FOR`` loops in a G-Code file.
@@ -502,7 +502,7 @@ class PGMCompiler:
             self._total_dwell_time += int(num - 1) * (self._total_dwell_time - _temp_dt)
 
     @contextlib.contextmanager
-    def repeat(self, num: int) -> Generator[PGMCompiler, None, None]:
+    def repeat(self, num: int) -> Generator[PGMCompiler]:
         """Repeat loop instruction.
 
         Context manager that manages a ``REPEAT`` loops in a G-Code file.
@@ -745,7 +745,7 @@ class PGMCompiler:
 
         # Convert points if G-Code commands
         args = [self._format_args(x, y, z, f) for (x, y, z, f) in zip(x_gc, y_gc, z_gc, f_gc)]
-        for (arg, s) in itertools.zip_longest(args, s_gc):
+        for arg, s in itertools.zip_longest(args, s_gc):
             if s == 0 and self._shutter_on is True:
                 self.instruction('\n')
                 self.dwell(self.short_pause)
