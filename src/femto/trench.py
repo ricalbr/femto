@@ -261,7 +261,7 @@ class Trench:
             coords.extend(line.coords)
         return np.array(coords).T
 
-    def toolpath(self) -> Generator[npt.NDArray[np.float64], None, None]:
+    def toolpath(self) -> Generator[npt.NDArray[np.float64]]:
         """Toolpath generator.
 
         The function takes a polygon and computes the filling toolpath.
@@ -736,7 +736,7 @@ def main() -> None:
     # b = T._trench_list[0]
     # b = T.trenchbed[0]
     for tr in T._trench_list:
-        for (x, y) in tr.toolpath():
+        for x, y in tr.toolpath():
             plt.plot(x, y)
 
     plt.axis('equal')
