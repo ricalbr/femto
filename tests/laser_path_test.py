@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
+import attrs
 import dill
 import numpy as np
 import pytest
@@ -16,9 +18,11 @@ def param() -> dict:
         'y_init': 1.5,
         'z_init': 0.035,
         'lsafe': 4.3,
+        'radius': 50,
         'speed_closed': 75,
         'speed_pos': 0.1,
         'samplesize': (100, 15),
+        'metadata': dict(name='LPth', power='300'),
     }
     return p
 
@@ -45,11 +49,13 @@ def laser_path(param) -> LaserPath:
 
 def test_default_values() -> None:
     lp = LaserPath()
+
+    assert lp.radius == float(15)
     assert lp.scan == int(1)
     assert lp.speed == float(1.0)
     assert lp.x_init == float(-2.0)
     assert lp.y_init == float(0.0)
-    assert lp.z_init is None
+    assert math.isnan(lp.z_init)
     assert lp.lsafe == float(2.0)
     assert lp.speed_closed == float(5.0)
     assert lp.speed_pos == float(0.5)
@@ -58,9 +64,11 @@ def test_default_values() -> None:
     assert lp.samplesize == (100, 50)
     assert lp.end_off_sample is True
     assert lp.warp_flag is False
+    assert lp.metadata == {'name': 'LaserPath'}
 
 
 def test_laserpath_values(laser_path) -> None:
+    assert laser_path.radius == float(50.0)
     assert laser_path.scan == int(6)
     assert laser_path.speed == float(20.0)
     assert laser_path.x_init == float(-2.0)
@@ -74,11 +82,26 @@ def test_laserpath_values(laser_path) -> None:
     assert laser_path.samplesize == (100, 15)
     assert laser_path.end_off_sample is True
     assert laser_path.warp_flag is False
+    assert laser_path.metadata == dict(name='LPth', power='300')
+
+
+def test_slots(param) -> None:
+    lp = LaserPath(**param)
+    with pytest.raises(AttributeError):
+        # non-existing attribrute
+        lp.sped = 10.00
+
+
+def test_scan_float_err(param) -> None:
+    param['scan'] = 1.2
+    with pytest.raises(TypeError):
+        LaserPath(**param)
 
 
 def test_from_dict(param) -> None:
     lp = LaserPath.from_dict(param)
 
+    assert lp.radius == float(50.0)
     assert lp.scan == int(6)
     assert lp.speed == float(20.0)
     assert lp.x_init == float(-2.0)
@@ -91,13 +114,48 @@ def test_from_dict(param) -> None:
     assert lp.acc_max == int(500)
     assert lp.samplesize == (100, 15)
     assert lp.end_off_sample is True
-    assert lp.warp_flag is False
+    assert lp.metadata == dict(name='LPth', power='300')
+
+
+def test_from_dict_update(param) -> None:
+    p = dict(radius=100, scan=10, speed_closed=3)
+    lp = LaserPath.from_dict(param, **p)
+
+    assert lp.radius == float(100.0)
+    assert lp.scan == int(10)
+    assert lp.speed == float(20.0)
+    assert lp.x_init == float(-2.0)
+    assert lp.y_init == float(1.5)
+    assert lp.z_init == float(0.035)
+    assert lp.lsafe == float(4.3)
+    assert lp.speed_closed == float(3)
+    assert lp.speed_pos == float(0.1)
+    assert lp.cmd_rate_max == int(1200)
+    assert lp.acc_max == int(500)
+    assert lp.samplesize == (100, 15)
+    assert lp.end_off_sample is True
+    assert lp.metadata == dict(name='LPth', power='300')
+
+
+def test_load(param) -> None:
+    lp1 = LaserPath(**param)
+    fn = Path('obj.pickle')
+    with open(fn, 'wb') as f:
+        dill.dump(attrs.asdict(lp1), f)
+
+    lp2 = LaserPath.load(fn)
+    assert isinstance(lp1, type(lp2))
+    assert sorted(attrs.asdict(lp1)) == sorted(attrs.asdict(lp2))
+    fn.unlink()
+
+
+def test_id(param) -> None:
+    lp = LaserPath(**param)
+    assert lp.id == 'LP'
 
 
 def test_repr(param) -> None:
     r = LaserPath(**param).__repr__()
-    print()
-    print(r)
     cname, _ = r.split('@')
     assert cname == 'LaserPath'
 
@@ -266,6 +324,92 @@ def test_linear_none(param) -> None:
     np.testing.assert_almost_equal(lp._s, np.array([0.0, 1.0, 1.0, 0.0, 0.0]))
 
 
+# def test_circ_input_validation(param) -> None:
+#     a_i, a_f = 0, np.pi / 2
+#
+#     param['radius'] = None
+#     lp = LaserPath(**param)
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f)
+#
+#     lp = LaserPath(**param)
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f, radius=None)
+#
+#     param['radius'] = 20
+#     lp = LaserPath(**param)
+#     lp.radius = None
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f)
+#
+#     param['speed'] = None
+#     lp = LaserPath(**param)
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f)
+#
+#     lp = LaserPath(**param)
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f, speed=None)
+#
+#     param['speed'] = 15
+#     lp = LaserPath(**param)
+#     lp.speed = None
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f)
+
+
+# def test_circ_length(param) -> None:
+#     a_i, a_f = 0, np.pi / 2
+#
+#     # DEFAULT VALUES FROM PARAM
+#     lp = LaserPath(**param)
+#     lp.start([0, 0, 0]).circ(a_i, a_f)
+#     lc = np.abs(a_f - a_i) * lp.radius
+#     # add two points from the start method
+#     assert lp._x.size == int(np.ceil(lc * lp.cmd_rate_max / lp.speed)) + 2
+#
+#     # CUSTOM RADIUS
+#     lp = LaserPath(**param)
+#     custom_r = 5
+#     lp.start([0, 0, 0]).circ(a_i, a_f, radius=custom_r)
+#     lc = np.abs(a_f - a_i) * custom_r
+#     assert lp._x.size == int(np.ceil(lc * lp.cmd_rate_max / lp.speed)) + 2
+#
+#     # CUSTOM SPEED
+#     lp = LaserPath(**param)
+#     custom_f = 5
+#     lp.start([0, 0, 0]).circ(a_i, a_f, speed=custom_f)
+#     lc = np.abs(a_f - a_i) * lp.radius
+#     assert lp._x.size == int(np.ceil(lc * lp.cmd_rate_max / custom_f)) + 2
+#
+#
+# def test_circ_coordinates(param) -> None:
+#     a_i, a_f = 1.5 * np.pi, 0
+#
+#     lp = LaserPath(**param)
+#     lp.start([0, 0, 0]).circ(a_i, a_f)
+#     assert pytest.approx(lp._x[-1]) == lp.radius
+#     assert pytest.approx(lp._y[-1]) == lp.radius
+#     assert lp._z[-1] == lp._z[0]
+#     lp.end()
+#
+#     a_i, a_f = 1.5 * np.pi, 1.75 * np.pi
+#
+#     lp = LaserPath(**param)
+#     lp.start([0, 0, 0]).circ(a_i, a_f)
+#     assert pytest.approx(lp._x[-1]) == lp.radius / np.sqrt(2)
+#     assert pytest.approx(lp._y[-1]) == lp.radius * (1 - 1 / np.sqrt(2))
+#     assert lp._z[-1] == lp._z[0]
+#     lp.end()
+#
+#
+# def test_circ_negative_radius(param) -> None:
+#     a_i, a_f = 1.5 * np.pi, 0
+#
+#     lp = LaserPath(**param)
+#     lp.radius = -60
+#     with pytest.raises(ValueError):
+#         lp.start([0, 0, 0]).circ(a_i, a_f).end()
 @pytest.mark.parametrize(
     'increment, len',
     [
@@ -315,7 +459,8 @@ def test_lastx(laser_path) -> None:
 
 
 def test_lastx_empty(empty_path) -> None:
-    assert empty_path.lastx is None
+    with pytest.raises(IndexError):
+        empty_path.lastx
 
 
 def test_y(laser_path) -> None:
@@ -331,7 +476,8 @@ def test_lasty(laser_path) -> None:
 
 
 def test_lasty_empty(empty_path) -> None:
-    assert empty_path.lasty is None
+    with pytest.raises(IndexError):
+        empty_path.lasty
 
 
 def test_z(laser_path) -> None:
@@ -347,7 +493,8 @@ def test_lastz(laser_path) -> None:
 
 
 def test_lastz_empty(empty_path) -> None:
-    assert empty_path.lastz is None
+    with pytest.raises(IndexError):
+        empty_path.lastz
 
 
 def test_last_point(laser_path) -> None:
@@ -356,6 +503,15 @@ def test_last_point(laser_path) -> None:
 
 def test_last_point_empty(empty_path) -> None:
     np.testing.assert_array_equal(empty_path.lastpt, np.array([]))
+
+
+def test_laserpath_points(laser_path) -> None:
+    x, y, z, f, s = laser_path.points
+    np.testing.assert_almost_equal(x, np.array([0.0, 1.0, 1.0, 1.0, 2.0]))
+    np.testing.assert_almost_equal(y, np.array([0.0, 0.0, 1.0, 2.0, 3.0]))
+    np.testing.assert_almost_equal(z, np.array([0.0, 0.0, 1.0, 0.0, 3.0]))
+    np.testing.assert_almost_equal(f, np.array([1.0, 2.0, 1.0, 3.0, 4.0]))
+    np.testing.assert_almost_equal(s, np.array([1.0, 1.0, 1.0, 1.0, 1.0]))
 
 
 def test_path3d(laser_path) -> None:
@@ -434,22 +590,33 @@ def test_subs_num_empty_base_case(empty_path) -> None:
 
 
 def test_pickle(laser_path) -> None:
-    filename = Path('test.pkl')
+    filename = Path('test.pickle')
     laser_path.export(filename.name)
     assert filename.is_file()
 
     with open(filename, 'rb') as f:
         lp = dill.load(f)
-    assert type(lp) == type(laser_path)
+    assert isinstance(lp, type(laser_path))
+    filename.unlink()
+
+
+def test_pickle_no_extension(laser_path) -> None:
+    filename = Path('test.pickle')
+    laser_path.export(filename.stem)
+    assert filename.is_file()
+
+    with open(filename, 'rb') as f:
+        lp = dill.load(f)
+    assert isinstance(lp, type(laser_path))
     filename.unlink()
 
 
 def test_pickle_as_dict(laser_path) -> None:
-    filename = Path('test.pkl')
+    filename = Path('test.pickle')
     laser_path.export(filename.name, as_dict=True)
     assert filename.is_file()
 
     with open(filename, 'rb') as f:
         lp = dill.load(f)
-    assert type(lp) == dict
+    assert isinstance(lp, dict)
     filename.unlink()

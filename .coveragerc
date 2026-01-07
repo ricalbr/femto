@@ -1,3 +1,9 @@
+[run]
+source = src
+omit =
+    src/femto/curves.py
+    src/femto/circuits.py
+
 [report]
 exclude_lines =
     pragma: no cover

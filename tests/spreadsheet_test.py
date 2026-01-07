@@ -1,17 +1,15 @@
 from __future__ import annotations
-from femto import __file__ as fpath
 
-import numpy as np
+from contextlib import nullcontext as does_not_raise
+from pathlib import Path
+
+import openpyxl
 import pytest
-from femto.device import Device
-from femto.helpers import dotdict
+from femto import __file__ as fpath
+from femto.curves import sin
 from femto.marker import Marker
 from femto.spreadsheet import Spreadsheet
-from itertools import product
 from femto.waveguide import Waveguide
-from pathlib import Path
-import openpyxl
-from contextlib import nullcontext as does_not_raise
 
 src_path = Path(fpath).parent
 dot_path = Path('.').cwd()
@@ -19,37 +17,27 @@ dot_path = Path('.').cwd()
 
 @pytest.fixture
 def all_cols():
-    all_cols = np.genfromtxt(
-        src_path / 'utils/spreadsheet_columns.txt',
-        delimiter=', ',
-        dtype=[
-            ('tagname', 'U20'),
-            ('fullname', 'U20'),
-            ('unit', 'U20'),
-            ('width', int),
-            ('format', 'U20'),
-        ],
-    )
-    return all_cols
+    from femto.spreadsheet import ColumnData
 
-
-@pytest.fixture
-def saints() -> list:
-    with open(src_path / 'utils/saints_data.txt') as f:
-        lines = f.readlines()
-    return lines
+    default_cols = []
+    with open(src_path / 'utils' / 'spreadsheet_columns.txt') as f:
+        next(f)
+        for line in f:
+            tag, name, unit, width, fmt = line.strip().split(', ')
+            default_cols.append(ColumnData(tagname=tag, name=name, unit=unit, width=width, format=fmt))
+    return default_cols
 
 
 @pytest.fixture
 def list_wg() -> list[Waveguide]:
-    PARAM_WG = dotdict(speed=20, radius=25, pitch=0.080, int_dist=0.007, samplesize=(25, 3))
+    PARAM_WG = dict(speed=20, radius=25, pitch=0.080, int_dist=0.007, samplesize=(25, 3))
 
     coup = [Waveguide(**PARAM_WG) for _ in range(5)]
     for i, wg in enumerate(coup):
         wg.start([-2, i * wg.pitch, 0.035])
         wg.linear([5, 0, 0])
-        wg.sin_coupler((-1) ** i * wg.dy_bend)
-        wg.sin_coupler((-1) ** i * wg.dy_bend)
+        wg.coupler(dy=(-1) ** i * wg.dy_bend, dz=0, fx=sin)
+        wg.coupler(dy=(-1) ** i * wg.dy_bend, dz=0, fx=sin)
         wg.linear([5, 0, 0])
         wg.end()
     return coup
@@ -57,9 +45,9 @@ def list_wg() -> list[Waveguide]:
 
 @pytest.fixture
 def list_mk() -> list[Marker]:
-    PARAM_MK = dotdict(scan=1, speed=2, speed_pos=5, speed_closed=5, depth=0.000, lx=1, ly=1)
+    PARAM_MK = dict(scan=1, speed=2, speed_pos=5, speed_closed=5, depth=0.000, lx=1, ly=1)
     markers = []
-    for (x, y) in zip(range(4, 8), range(3, 7)):
+    for x, y in zip(range(4, 8), range(3, 7)):
         m = Marker(**PARAM_MK)
         m.cross([x, y])
         markers.append(m)
@@ -67,17 +55,17 @@ def list_mk() -> list[Marker]:
 
 
 @pytest.fixture
-def ss_param() -> dotdict:
-    return dotdict(
+def ss_param():
+    return dict(
         book_name='custom_book_name.xlsx',
         sheet_name='custom_sheet_name',
-        columns_names='name power speed scan depth int_dist yin yout obs',
+        columns_names=['name', 'power', 'speed', 'scan', 'depth', 'int_dist', 'yin', 'yout', 'obs'],
     )
 
 
 @pytest.fixture
-def wg_param() -> dotdict:
-    return dotdict(
+def wg_param():
+    return dict(
         speed_closed=40,
         radius=40,
         depth=-0.860,
@@ -87,8 +75,8 @@ def wg_param() -> dotdict:
 
 
 @pytest.fixture
-def gc_param() -> dotdict:
-    return dotdict(
+def gc_param():
+    return dict(
         filename='test_program.pgm',
         laser='PHAROS',
         n_glass=1.4625,
@@ -97,106 +85,54 @@ def gc_param() -> dotdict:
     )
 
 
-@pytest.fixture
-def device() -> Device:
-    powers = np.linspace(600, 800, 5)
-    speeds = [20, 30, 40]
-    scans = [3, 5, 7]
-
-    dev = Device(filename='test_program.pgm', laser='PHAROS')
-
-    wg_param = dotdict(
-        speed_closed=40,
-        radius=40,
-        depth=-0.860,
-        pitch=0.080,
-        samplesize=(25, 25),
-    )
-
-    for i_guide, (p, v, ns) in enumerate(product(powers, speeds, scans)):
-
-        start_pt = [-2, 2 + i_guide * 0.08, wg_param.depth]
-        wg = Waveguide(**wg_param, speed=v, scan=ns)
-        wg.power = p  # Can NOT be added inside of the arguments of Waveguide
-        wg.start(start_pt)
-        wg.linear([27, 0, 0])
-        wg.end()
-
-        dev.append(wg)
-
-    return dev
+# def device_redd_cols(redd_cols, non_redd_cols, gc_param):
+#
+#     # redd_cols: the reddundant columns, so all guides have this same attribute
+#     dev = Device(**gc_param)
+#     ints = iter(range(2, 500))
+#     for i_guide in range(10):
+#
+#         non_rep_value = next(ints)
+#
+#         start_pt = [-2, 2 + i_guide * 0.08, 0]
+#         wg = Waveguide()
+#
+#         for attribute in redd_cols:
+#             setattr(wg, attribute, 50)  # set them all to the same value
+#
+#         for attribute in non_redd_cols:
+#             setattr(wg, attribute, non_rep_value)
+#
+#         wg.start(start_pt)
+#         wg.linear([27, 0, 0])
+#         wg.end()
+#
+#         dev.append(wg)
+#
+#     return dev
 
 
-@pytest.fixture
-def empty_device() -> Device:
-    dev = Device(filename='test_program.pgm', laser='PHAROS')
-    return dev
+def test_spsh_init_default():
+    S = Spreadsheet()
+    assert S.columns_names == ['name', 'power', 'speed', 'scan', 'radius', 'int_dist', 'depth', 'yin', 'yout', 'obs']
+    assert S.description == ''
+    assert S.book_name == 'FABRICATION.xlsx'
+    assert S.sheet_name == 'Fabrication'
+    assert S.font_name == 'DejaVu Sans Mono'
+    assert S.font_size == 11
+    assert S.redundant_cols is False
+    assert S.new_columns == []
+    assert S.metadata == {}
+
+    assert S._workbook.default_format_properties['font_name'] == 'DejaVu Sans Mono'
+    assert S._workbook.default_format_properties['font_size'] == 11
+    assert S._workbook.filename.name == 'FABRICATION.xlsx'
+    assert S._worksheet.name == 'Fabrication'
 
 
-def device_redd_cols(redd_cols, non_redd_cols, gc_param):
-
-    # redd_cols: the reddundant columns, so all guides have this same attribute
-
-    dev = Device(**gc_param)
-    ints = iter(range(2, 500))
-
-    i_global = 0
-
-    for i_guide in range(10):
-
-        non_rep_value = next(ints)
-
-        start_pt = [-2, 2 + i_guide * 0.08, 0]
-        wg = Waveguide()
-
-        for attribute in redd_cols:
-            setattr(wg, attribute, 50)  # set them all to the same value
-
-        for attribute in non_redd_cols:
-            setattr(wg, attribute, non_rep_value)
-
-        wg.start(start_pt)
-        wg.linear([27, 0, 0])
-        wg.end()
-
-        dev.append(wg)
-
-    return dev
-
-
-def test_spsh_defaults(device):
-    spsh = Spreadsheet(device)
-    spsh.close()
-    assert spsh.columns_names == 'name power speed scan radius int_dist depth yin yout obs'
-    assert spsh.wb.default_format_properties['font_name'] == 'DejaVu Sans Mono'
-    assert spsh.wb.default_format_properties['font_size'] == 11
-    assert spsh.wb.filename == 'my_fabrication.xlsx'
-    assert spsh.ws.name == 'Fabrication'
-    assert spsh.suppr_redd_cols
-    assert not spsh.static_preamble
-    Path(dot_path / 'my_fabrication.xlsx').unlink()
-
-
-def test_spsh_initialization_without_device():
-    with pytest.raises(TypeError):
-        spsh = Spreadsheet()
-        spsh.close()
-
-
-# @pytest.mark.parametrize('fmt_str', ['0000.000', '000000', '00000.', '0', ''])
-@pytest.mark.parametrize('fmt_str', ['0000.000'])
-def test_create_numerical_format(fmt_str, device, ss_param):
-    spsh = Spreadsheet(device, **ss_param)
-    spsh._create_numerical_format(fmt_str)
-    assert spsh.formats[fmt_str].num_format == fmt_str
-    spsh.close()
-    (dot_path / 'custom_book_name.xlsx').unlink()
-
-
-def test_extra_preamble_info(all_cols, device, ss_param):
-
+def test_extra_preamble_info(all_cols, ss_param):
     extra_preamble_info = {
-        'wl': '1030 nm',
+        'wavelength': '1030 nm',
         'laboratory': 'CAPABLE',
         'reprate': '1 MHz',
         'material': 'EAGLE XG',
@@ -205,13 +141,14 @@ def test_extra_preamble_info(all_cols, device, ss_param):
         'preset': '4',
         'attenuator': '33 %',
         'objective': '1000x',
-        'sample_name': 'My sample 01',
+        'filename': 'My sample 01',
     }
 
-    ss_param.extra_preamble_info = extra_preamble_info
-    ss_param.book_name = 'extra_preamble_info.xlsx'
+    ss_param['metadata'] = extra_preamble_info
+    ss_param['book_name'] = 'extra_preamble_info.xlsx'
 
-    device.xlsx(**ss_param)
+    with Spreadsheet(**ss_param) as S:
+        S.write([])
 
     wb = openpyxl.load_workbook(dot_path / 'extra_preamble_info.xlsx')
     worksheet = wb['custom_sheet_name']
@@ -228,213 +165,291 @@ def test_extra_preamble_info(all_cols, device, ss_param):
     (dot_path / 'extra_preamble_info.xlsx').unlink()
 
 
-def test_add_custom_column(device, ss_param):
+# def test_add_custom_column(ss_param):
+#
+#     rep_rates = [20, 100, 1000]
+#     powers = np.linspace(100, 500, 5)
+#     scan_offsets = np.linspace(0.000100, 0.000500, 5)
+#
+#     dev = Device(filename='test_program.pgm', laser='PHAROS')
+#
+#     wg_param = dict(
+#         speed_closed=40,
+#         radius=40,
+#         speed=2,
+#         scan=10,
+#         depth=-0.100,
+#         samplesize=(25, 25),
+#     )
+#
+#     for i_guide, (rr, p, so) in enumerate(product(rep_rates, powers, scan_offsets)):
+#
+#         start_pt = [-2, 2 + i_guide * 0.08, wg_param['depth']]
+#
+#         wg = Waveguide(**wg_param)
+#         wg.power = p  # Can NOT be added inside of the arguments of Waveguide
+#         wg.reprate = rr
+#         wg.sco = so
+#
+#         wg.start(start_pt)
+#         wg.linear([27, 0, 0])
+#         wg.end()
+#
+#         dev.append(wg)
+#
+#     ss_param.book_name = 'test_new_column.xlsx'
+#     ss_param.columns_names = 'name power reprate sco yin yout obs'
+#     ss_param.new_columns = [
+#         ('sco', 'Scan offset', 'um', 7, '0.0000'),
+#         ('reprate', 'Rep. rate', 'kHz', 7, '0'),
+#     ]
+#     dev.xlsx(**ss_param)
+#
+#     wb = openpyxl.load_workbook(dot_path / 'test_new_column.xlsx')
+#     worksheet = wb['custom_sheet_name']
+#
+#     assert worksheet.cell(row=8, column=9).value == 'Scan offset / um'
+#     assert worksheet.cell(row=8, column=8).value == 'Rep. rate / kHz'
+#
+#     for row in range(1, 20):
+#         assert worksheet.cell(row=row, column=2).value != 'Rep. rate / kHz'
+#         assert worksheet.cell(row=row, column=2).value != 'Rep. rate / MHz'
+#
+#     (dot_path / 'test_new_column.xlsx').unlink()
 
-    rep_rates = [20, 100, 1000]
-    powers = np.linspace(100, 500, 5)
-    scan_offsets = np.linspace(0.000100, 0.000500, 5)
 
-    dev = Device(filename='test_program.pgm', laser='PHAROS')
+def test_write_header(ss_param):
+    with Spreadsheet(**ss_param) as S:
+        print(S)
 
-    wg_param = dotdict(
-        speed_closed=40,
-        radius=40,
-        speed=2,
-        scan=10,
-        depth=-0.100,
-        samplesize=(25, 25),
-    )
+    wb = openpyxl.load_workbook(dot_path / 'custom_book_name.xlsx')
+    worksheet = wb['custom_sheet_name']
 
-    for i_guide, (rr, p, so) in enumerate(product(rep_rates, powers, scan_offsets)):
+    assert worksheet.cell(row=2, column=6).value == 'Description'
+    (dot_path / 'custom_book_name.xlsx').unlink()
 
-        start_pt = [-2, 2 + i_guide * 0.08, wg_param.depth]
 
-        wg = Waveguide(**wg_param)
-        wg.power = p  # Can NOT be added inside of the arguments of Waveguide
-        wg.reprate = rr
-        wg.sco = so
+def test_write_preamble_default(ss_param):
+    del ss_param['columns_names']
+    with Spreadsheet(**ss_param) as S:
+        print(S)
 
-        wg.start(start_pt)
-        wg.linear([27, 0, 0])
-        wg.end()
+    wb = openpyxl.load_workbook(dot_path / 'custom_book_name.xlsx')
+    worksheet = wb['custom_sheet_name']
 
-        dev.append(wg)
+    assert worksheet.cell(row=9, column=2).value == 'General'
+    assert worksheet.cell(row=10, column=2).value == 'Laboratory'
+    assert worksheet.cell(row=11, column=2).value == 'Temperature'
+    assert worksheet.cell(row=12, column=2).value == 'Humidity'
+    assert worksheet.cell(row=13, column=2).value == 'Date'
+    assert worksheet.cell(row=14, column=2).value == 'Start'
+    assert worksheet.cell(row=15, column=2).value == 'Filename'
 
-    ss_param.book_name = 'test_new_column.xlsx'
-    ss_param.columns_names = 'name power reprate sco yin yout obs'
-    ss_param.new_columns = [
-        ('sco', 'Scan offset', 'um', 7, '0.0000'),
-        ('reprate', 'Rep. rate', 'kHz', 7, '0'),
+    assert worksheet.cell(row=18, column=2).value == 'Substrate'
+    assert worksheet.cell(row=19, column=2).value == 'Material'
+    assert worksheet.cell(row=20, column=2).value == 'Facet'
+    assert worksheet.cell(row=21, column=2).value == 'Thickness'
+
+    assert worksheet.cell(row=24, column=2).value == 'Laser Parameters'
+    assert worksheet.cell(row=25, column=2).value == 'Laser'
+    assert worksheet.cell(row=26, column=2).value == 'Wavelength'
+    assert worksheet.cell(row=27, column=2).value == 'Duration'
+    assert worksheet.cell(row=28, column=2).value == 'Reprate'
+    assert worksheet.cell(row=29, column=2).value == 'Attenuator'
+    assert worksheet.cell(row=30, column=2).value == 'Preset'
+
+    assert worksheet.cell(row=33, column=2).value == 'Irradiation'
+    assert worksheet.cell(row=34, column=2).value == 'Objective'
+    assert worksheet.cell(row=35, column=2).value == 'Power'
+    assert worksheet.cell(row=36, column=2).value == 'Speed'
+    assert worksheet.cell(row=37, column=2).value == 'Scan'
+    assert worksheet.cell(row=38, column=2).value == 'Depth'
+
+    for i in range(8, 39):
+        assert worksheet.cell(row=i, column=3).value is None
+    (dot_path / 'custom_book_name.xlsx').unlink()
+
+
+def test_add_name_col(ss_param):
+    ss_param['columns_names'] = [tag for tag in ss_param['columns_names'] if tag != 'name']
+    with Spreadsheet(**ss_param) as S:
+        assert S.columns_names[0] == 'name'
+    (dot_path / 'custom_book_name.xlsx').unlink()
+
+
+def test_generate_all_cols_data(all_cols):
+    with Spreadsheet() as S:
+        assert S.generate_all_cols_data() == all_cols
+    (dot_path / 'FABRICATION.xlsx').unlink()
+
+
+def test_generate_all_cols_with_newcols(all_cols):
+    from femto.spreadsheet import ColumnData
+
+    new_cols = [
+        ('reprate', 'Rep. rate', 'MHz', '20', '0.000'),
+        ('camera', 'CAM', '', '20', 'text'),
+        ('cmdrate', 'Command rate', 'pt/s', '25', '0.000'),
     ]
-    dev.xlsx(**ss_param)
+    new_cols_obj = [ColumnData(*nc) for nc in new_cols]
 
-    wb = openpyxl.load_workbook(dot_path / 'test_new_column.xlsx')
-    worksheet = wb['custom_sheet_name']
-
-    assert worksheet.cell(row=8, column=9).value == 'Scan offset / um'
-    assert worksheet.cell(row=8, column=8).value == 'Rep. rate / kHz'
-
-    for row in range(1, 20):
-        assert worksheet.cell(row=row, column=2).value != 'Rep. rate / kHz'
-        assert worksheet.cell(row=row, column=2).value != 'Rep. rate / MHz'
-
-    (dot_path / 'test_new_column.xlsx').unlink()
-
-
-@pytest.mark.parametrize('day', [0, 20, 35, 64, 72, 128, 148, 182, 234, 300, 310])
-def test_write_saints_list(device, ss_param, saints, day):
-    spsh = Spreadsheet(device, **ss_param)
-    spsh._write_saints_list()
-    spsh.close()
-
-    wb = openpyxl.load_workbook(dot_path / 'custom_book_name.xlsx')
-    worksheet = wb['custom_sheet_name']
-
-    assert worksheet.cell(row=day + 1, column=157).value == saints[day].strip()
-
-    (dot_path / 'custom_book_name.xlsx').unlink()
-
-
-@pytest.mark.parametrize('saints', [True, False])
-def test_with_saints(saints, device, ss_param):
-    ss_param.saints = saints
-    spsh = Spreadsheet(device, **ss_param)
-    spsh.write_structures()
-    spsh.close()
-
-    assert spsh.saints is saints
-
-
-def test_write_header(device, ss_param):
-    spsh = Spreadsheet(device, **ss_param)
-    spsh._build_struct_list()
-    spsh._write_header()
-    spsh.close()
-
-    wb = openpyxl.load_workbook(dot_path / 'custom_book_name.xlsx')
-    worksheet = wb['custom_sheet_name']
-
-    assert worksheet.cell(row=2, column=4).value == 'Description'
-    (dot_path / 'custom_book_name.xlsx').unlink()
+    obs = all_cols.pop(-1)
+    all_cols.extend(new_cols_obj[1:])
+    all_cols.append(obs)
+    with Spreadsheet(new_columns=new_cols) as S:
+        assert S.generate_all_cols_data() == all_cols
+    (dot_path / 'FABRICATION.xlsx').unlink()
 
 
 @pytest.mark.parametrize(
-    'cols',
+    'ncol',
     [
-        'power speed scan radius int_dist, ',
-        'power, speed scan radius int_dist',
-        'power scan, speed radius int_dist',
-        'radius, power speed scan',
+        ('reprate', 'MHz', '20', '0.000'),
+        ('camera', 'CAM', '', 'text'),
+        ('cmdrate', 'Command rate', 'pt/s', '25', '0.000', 'foo', 'bar'),
     ],
 )
-def test_redd_cols(cols, ss_param, gc_param):
-
-    non_redd_cols, redd_cols = cols.split(', ')
-    non_redd_cols = non_redd_cols.split()
-    redd_cols = redd_cols.split()
-
-    d = device_redd_cols(redd_cols, non_redd_cols, gc_param)
-
-    ss_param.columns_names = cols.replace(',', '').strip()
-    ss_param.suppr_redd_cols = True
-    ss_param.device = d
-
-    spsh = Spreadsheet(**ss_param)
-    spsh._build_struct_list()
-    spsh.close()
-
-    columns_tnames = list(spsh.columns_data['tagname'])
-    columns_tnames.remove('name')
-
-    assert all([tn in non_redd_cols for tn in columns_tnames])
-    assert all([tn not in redd_cols for tn in columns_tnames])
-
-    (dot_path / 'custom_book_name.xlsx').unlink()
+def test_new_col_wrong_format(ncol):
+    with pytest.raises(ValueError):
+        Spreadsheet(new_columns=ncol)
 
 
-def test_write_structures(device, wg_param, gc_param, ss_param):
-    with Spreadsheet(device=device, **ss_param) as spsh:
-        spsh.write_structures(verbose=True)
+def test_create_structures(list_wg, gc_param, ss_param):
+    with Spreadsheet(**ss_param) as spsh:
+        spsh.write(list_wg)
 
     assert (dot_path / 'custom_book_name.xlsx').is_file()
     (dot_path / 'custom_book_name.xlsx').unlink()
 
 
+@pytest.mark.parametrize('structures', [[], [[]], [[[]]], [[[[]]]]])
+def test_write_empty(ss_param, structures):
+    with Spreadsheet(**ss_param) as S:
+        info, numdata = S._extract_data(structures)
+    assert info == []
+    assert numdata.size == 0
+    (dot_path / 'custom_book_name.xlsx').unlink()
+
+
+def test_write_ignore_cols(ss_param, list_wg):
+    with Spreadsheet(**ss_param, redundant_cols=True) as S:
+        info, numdata = S._extract_data(list_wg)
+
+    for row in range(numdata.size):
+        for elem in numdata[row]:
+            if isinstance(elem, str):
+                continue
+            else:
+                assert elem < 1.1e5
+
+    (dot_path / 'custom_book_name.xlsx').unlink()
+
+
+def test_write_error(ss_param):
+    with pytest.raises(ValueError):
+        with Spreadsheet(**ss_param) as S:
+            S.write([1, 2, 3])
+    (dot_path / 'custom_book_name.xlsx').unlink()
+
+
+def test_create_formats():
+    with Spreadsheet() as S:
+        fmt_dict = S._default_formats()
+
+    default_value = {
+        'title': {
+            'font_color': 'white',
+            'bg_color': '#6C5B7B',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1,
+            'bold': True,
+            'text_wrap': True,
+        },
+        'parname': {
+            'bg_color': '#D5CABD',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1,
+            'bold': True,
+            'text_wrap': True,
+        },
+        'parval': {'text_wrap': True, 'align': 'center', 'valign': 'vcenter', 'border': 1},
+        'text': {'align': 'center', 'valign': 'vcenter'},
+        'date': {'align': 'center', 'valign': 'vcenter', 'border': 1, 'num_format': 'DD/MM/YYYY'},
+        'time': {'align': 'center', 'valign': 'vcenter', 'border': 1, 'num_format': 'HH:MM:SS'},
+    }
+    assert fmt_dict == default_value
+
+
+def test_add_line_no_format() -> None:
+    with Spreadsheet() as S:
+        S.add_line(row=1, col=1, data=['ciao'], fmt=None)
+        _, fmt = S._worksheet.table[1][1]
+        assert fmt.font_size == 11
+        assert fmt.font_name == 'DejaVu Sans Mono'
+    (dot_path / 'FABRICATION.xlsx').unlink()
+
+
 @pytest.mark.parametrize(
-    'powers, speeds, scans',
+    'fmt_str, expectation',
     [
-        ([200.0], [20.0], [3]),
-        ([200.0], [20.0, 30.0], [3]),
-        ([200.0], [20.0, 30.0], [3, 5]),
-        (np.linspace(200, 300, 5), [20.0], [3]),
-        (np.linspace(200, 300, 5), [20.0, 30.0], [3]),
-        (np.linspace(200, 300, 5), [20.0, 30.0], [3, 5]),
+        ('title', does_not_raise()),
+        (['parname', 'title', 'title'], does_not_raise()),
+        (['date', 'date', 'date', 'date'], does_not_raise()),
+        (['DATE', 'PARNAME'], does_not_raise()),
+        (['null'], pytest.raises(KeyError)),
     ],
 )
-def test_static_preamble(powers, speeds, scans, gc_param, wg_param, ss_param):
-
-    device = Device(**gc_param)
-
-    for i_guide, (p, v, ns) in enumerate(product(powers, speeds, scans)):
-
-        start_pt = [-2, 2 + i_guide * 0.08, wg_param.depth]
-        wg = Waveguide(**wg_param, speed=v, scan=ns)
-        wg.power = p
-        wg.start(start_pt)
-        wg.linear([wg.samplesize[0] + 2, 0, 0])
-        wg.end()
-
-        device.append(wg)
-
-    obj_list = device.writers[Waveguide].obj_list
-    spsh = Spreadsheet(device=device, book_name=ss_param.book_name)
-    spsh._build_struct_list(obj_list, columns_names=ss_param.columns_names, static_preamble=True)
-    spsh.close()
-
-    for k, v in {'power': powers, 'speed': speeds, 'scan': scans}.items():
-        exp = f'{v[0]}' if (len(v) == 1) else 'variable'
-        assert spsh.preamble[k].v == exp
-
-    (dot_path / 'custom_book_name.xlsx').unlink()
+def test_add_line_keyerror(fmt_str, expectation) -> None:
+    S = Spreadsheet()
+    data = len(fmt_str) * [1]
+    with expectation:
+        S.add_line(row=1, col=1, data=data, fmt=fmt_str)
 
 
 @pytest.mark.parametrize(
-    'init_dev, bsl_dev',
-    list(product(*2 * [[True, False]])),
+    'data, fmt_str, expectation',
+    [
+        ([1, 2, 3], 'title', does_not_raise()),
+        ([1, 2, 3], ['parname', 'title', 'title'], does_not_raise()),
+        ([1, '2', 3, 'test'], ['date', 'date', 'date', 'date'], does_not_raise()),
+        ([1, 2, 3], ['title', 'parname', 'parname', 'parname'], pytest.raises(ValueError)),
+    ],
 )
-def test_device_init(device, ss_param, init_dev, bsl_dev):
-
-    ss_pars = ss_param
-    bsl_pars = {}
-
-    if init_dev:
-        ss_pars['device'] = device
-
-    if bsl_dev:
-        bsl_pars['structures'] = device.writers[Waveguide].obj_list
-
-    exp = does_not_raise() if init_dev else pytest.raises(TypeError)
-    with exp:
-        spsh = Spreadsheet(**ss_pars)
-        spsh._build_struct_list()
-        spsh.close()
-
-    if (dot_path / 'custom_book_name.xlsx').exists():
-        (dot_path / 'custom_book_name.xlsx').unlink()
+def test_add_line_length_data_fmt(data, fmt_str, expectation) -> None:
+    S = Spreadsheet()
+    with expectation:
+        S.add_line(row=1, col=1, data=data, fmt=fmt_str)
 
 
-@pytest.mark.parametrize('verbose', [True, False])
-def test_build_structure_list(empty_device, list_wg, list_mk, ss_param, verbose):
-    empty_device.extend(list_wg)
+def test_add_line_formula() -> None:
+    with Spreadsheet() as S:
+        S.add_line(row=1, col=1, data='=SUM(A1:A5)')
+        assert S._worksheet.table[1][1].formula
+        assert S._worksheet.table[1][1].formula == 'SUM(A1:A5)'
+    (dot_path / 'FABRICATION.xlsx').unlink()
 
-    obj_list = empty_device.writers[Waveguide].obj_list
 
-    spsh = Spreadsheet(device=empty_device, **ss_param)
-    # Use the defaults for suppressing reddundant olumns and static preamble
-    spsh._build_struct_list(obj_list, ss_param.columns_names, verbose=verbose)
-    spsh.close()
+def test_add_line_data() -> None:
+    with Spreadsheet() as S:
+        S.add_line(row=1, col=1, data=[1, 2, 'ciao', 1.2])
+        for row in range(5):
+            row_dict = S._worksheet.table.get(row, None)
+            for col in range(5):
+                if row_dict is not None:
+                    col_entry = row_dict.get(col, None)
+                else:
+                    col_entry = None
+                print(row, col, col_entry)
+        shared_strings = sorted(S._worksheet.str_table.string_table, key=S._worksheet.str_table.string_table.get)
 
-    assert (dot_path / 'custom_book_name.xlsx').is_file()
-    assert len(spsh.struct_data) == len(obj_list)
-
-    (dot_path / 'custom_book_name.xlsx').unlink()
+        assert S._worksheet.table[1][1].number
+        assert S._worksheet.table[1][1].number == 1
+        assert S._worksheet.table[1][2].number
+        assert S._worksheet.table[1][2].number == 2
+        assert S._worksheet.table[1][3].string
+        assert shared_strings[S._worksheet.table[1][3].string] == 'ciao'
+        assert S._worksheet.table[1][4].number
+        assert S._worksheet.table[1][4].number == 1.2
+    (dot_path / 'FABRICATION.xlsx').unlink()

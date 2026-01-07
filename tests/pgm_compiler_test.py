@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import math
 from collections import deque
 from contextlib import nullcontext as does_not_raise
@@ -10,6 +11,7 @@ import numpy as np
 import pytest
 from femto.helpers import flatten
 from femto.helpers import listcast
+from femto.pgmcompiler import farcall
 from femto.pgmcompiler import PGMCompiler
 from femto.pgmcompiler import sample_warp
 
@@ -27,6 +29,7 @@ def param() -> dict:
         'short_pause': 0.025,
         'speed_pos': 10,
         'flip_x': True,
+        'minimal_gcode': True,
     }
     return p
 
@@ -50,11 +53,13 @@ def test_default_values() -> None:
     assert G.rotation_angle == float(0.0)
     assert G.aerotech_angle == float(0.0)
     assert G.long_pause == float(0.5)
-    assert G.short_pause == float(0.1)
+    assert G.short_pause == float(0.05)
     assert G.output_digits == int(6)
     assert G.speed_pos == float(5.0)
     assert G.flip_x is False
     assert G.flip_y is False
+    assert G.minimal_gcode is False
+    assert G.verbose is True
 
 
 def test_gcode_values(param) -> None:
@@ -76,9 +81,11 @@ def test_gcode_values(param) -> None:
     assert G.speed_pos == float(10)
     assert G.flip_x is True
     assert G.flip_y is False
+    assert G.minimal_gcode is True
+    assert G.verbose is True
 
 
-def test_mk_from_dict(param) -> None:
+def test_pgm_from_dict(param) -> None:
     G = PGMCompiler.from_dict(param)
     assert G.filename == 'test.pgm'
     assert G.export_dir == 'G-Code'
@@ -97,6 +104,32 @@ def test_mk_from_dict(param) -> None:
     assert G.speed_pos == float(10)
     assert G.flip_x is True
     assert G.flip_y is False
+    assert G.minimal_gcode is True
+    assert G.verbose is True
+
+
+def test_pgm_from_dict_update(param) -> None:
+    G = PGMCompiler.from_dict(param, output_digits=9, laser='UWE', samplesize=(25, 30), long_pause=1.0)
+
+    assert G.filename == 'test.pgm'
+    assert G.export_dir == 'G-Code'
+    assert G.samplesize == (25, 30)
+    assert G.laser == 'UWE'
+    assert G.home is False
+    assert G.shift_origin == (0.0, 0.0)
+    assert G.warp_flag is False
+    assert G.n_glass == float(1.50)
+    assert G.n_environment == float(1.33)
+    assert G.rotation_angle == float(math.radians(1.0))
+    assert G.aerotech_angle == float(0.0)
+    assert G.long_pause == float(1.0)
+    assert G.short_pause == float(0.025)
+    assert G.output_digits == int(9)
+    assert G.speed_pos == float(10)
+    assert G.flip_x is True
+    assert G.flip_y is False
+    assert G.minimal_gcode is True
+    assert G.verbose is True
 
 
 def test_repr(param) -> None:
@@ -121,20 +154,21 @@ def test_enter_exit_method_default(param) -> None:
                 '; SETUP PHAROS - CAPABLE LAB\n',
                 '\n',
                 'ENABLE X Y Z\n',
-                'METRIC\n',
-                'SECONDS\n',
-                'G359\n',
-                'VELOCITY ON\n',
                 'PSOCONTROL X RESET\n',
                 'PSOOUTPUT X CONTROL 3 0\n',
                 'PSOCONTROL X OFF\n',
-                'ABSOLUTE\n',
-                'G17\n',
+                '\n',
+                'G71     ; DISTANCE UNITS: METRIC\n',
+                'G76     ; TIME UNITS: SECONDS\n',
+                'G90     ; ABSOLUTE MODE\n',
+                'G359    ; WAIT MODE NOWAIT\n',
+                'G108    ; VELOCITY ON\n',
+                'G17     ; ROTATIONS IN XY PLANE\n',
                 '\n',
                 '; NSCOPETRIG\n',
                 '; MSGCLEAR -1\n',
                 '\n',
-                'DWELL 1.0\n',
+                'G4 P1.0 ; DWELL\n',
                 '\n',
             ]
         )
@@ -144,6 +178,57 @@ def test_enter_exit_method_default(param) -> None:
     file = fold / param['filename']
     file.unlink()
     fold.rmdir()
+
+
+def test_enter_exit_method_verbose() -> None:
+    p = dict(
+        filename='testPGM.pgm',
+        n_glass=1.5,
+        n_environment=1.33,
+        laser='ant',
+        samplesize=(25, 25),
+        home=True,
+        aerotech_angle=2.0,
+        rotation_angle=1.0,
+        flip_x=True,
+        verbose=False,
+    )
+    with PGMCompiler(**p) as G:
+        print(G._instructions)
+        assert G._instructions == deque(
+            [
+                '; SETUP ANT - DIAMOND LAB\n',
+                '\n',
+                'ENABLE X Y Z\n',
+                'PSOCONTROL Z RESET\n',
+                'PSOOUTPUT Z CONTROL 0 1\n',
+                'PSOCONTROL Z OFF\n',
+                '\n',
+                'G71     ; DISTANCE UNITS: METRIC\n',
+                'G76     ; TIME UNITS: SECONDS\n',
+                'G90     ; ABSOLUTE MODE\n',
+                'G359    ; WAIT MODE NOWAIT\n',
+                'G108    ; VELOCITY ON\n',
+                'G17     ; ROTATIONS IN XY PLANE\n',
+                '\n',
+                '; NSCOPETRIG\n',
+                '; MSGCLEAR -1\n',
+                '\n',
+                'G4 P1.0 ; DWELL\n',
+                '\n',
+                '\n; ACTIVATE AXIS ROTATION\n',
+                'G1 X0.000000 Y0.000000 Z0.000000 F5.000000\n',
+                'G84 X Y\n',
+                'G4 P0.05 ; DWELL\n',
+                'G84 X Y F2.0\n\n',
+                'G4 P0.05 ; DWELL\n',
+            ]
+        )
+    assert G._instructions == deque([])
+
+    file = Path('.') / p['filename']
+    assert file.is_file()
+    file.unlink()
 
 
 def test_enter_exit_method() -> None:
@@ -164,27 +249,28 @@ def test_enter_exit_method() -> None:
                 '; SETUP ANT - DIAMOND LAB\n',
                 '\n',
                 'ENABLE X Y Z\n',
-                'METRIC\n',
-                'SECONDS\n',
-                'G359\n',
-                'VELOCITY ON\n',
                 'PSOCONTROL Z RESET\n',
                 'PSOOUTPUT Z CONTROL 0 1\n',
                 'PSOCONTROL Z OFF\n',
-                'ABSOLUTE\n',
-                'G17\n',
+                '\n',
+                'G71     ; DISTANCE UNITS: METRIC\n',
+                'G76     ; TIME UNITS: SECONDS\n',
+                'G90     ; ABSOLUTE MODE\n',
+                'G359    ; WAIT MODE NOWAIT\n',
+                'G108    ; VELOCITY ON\n',
+                'G17     ; ROTATIONS IN XY PLANE\n',
                 '\n',
                 '; NSCOPETRIG\n',
                 '; MSGCLEAR -1\n',
                 '\n',
-                'DWELL 1.0\n',
+                'G4 P1.0 ; DWELL\n',
                 '\n',
                 '\n; ACTIVATE AXIS ROTATION\n',
                 'G1 X0.000000 Y0.000000 Z0.000000 F5.000000\n',
                 'G84 X Y\n',
-                'DWELL 0.1\n',
+                'G4 P0.05 ; DWELL\n',
                 'G84 X Y F2.0\n\n',
-                'DWELL 0.1\n',
+                'G4 P0.05 ; DWELL\n',
             ]
         )
     assert G._instructions == deque([])
@@ -192,6 +278,14 @@ def test_enter_exit_method() -> None:
     file = Path('.') / p['filename']
     assert file.is_file()
     file.unlink()
+
+
+@pytest.mark.parametrize('p, n, expected', [(1, 1, 1), (0.5, 1, 0.5), (405, 1, 405), (2, 3, 6), (15, 15, 225)])
+def test_total_dwell_time(param, p, n, expected) -> None:
+    G = PGMCompiler(**param)
+    for _ in range(n):
+        G.dwell(p)
+    assert G.total_dwell_time == expected
 
 
 @pytest.mark.parametrize('xs, expected', [(1, 1), (0.5, 0.5), (-5, 5)])
@@ -226,7 +320,7 @@ def test_neff(param, ng, ne, expected) -> None:
 def test_pso_label(param, laser, expected) -> None:
     param['laser'] = laser
     G = PGMCompiler(**param)
-    assert G.pso_label == expected
+    assert G.pso_axis == expected
 
 
 @pytest.mark.parametrize(
@@ -244,7 +338,7 @@ def test_pso_label_raise(param, laser, expectation) -> None:
     param['laser'] = laser
     G = PGMCompiler(**param)
     with expectation:
-        print(G.pso_label)
+        print(G.pso_axis)
 
 
 @pytest.mark.parametrize(
@@ -286,30 +380,30 @@ def test_dwell_time(param, p, t, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    'x, y, expected',
+    'xy, expected',
     [
-        (0, 0, 0),
-        (1, 1, 0),
-        (2, 2, 0),
-        (3, 3, 0),
-        (4, 4, 0),
-        (5, 5, 0),
-        (50, 50, 0),
-        (-1, -1.8, 0),
-        (-2, -2.8, 0),
-        (-3, -3.8, 0),
-        (-4, -4.8, 0),
-        (-5, -5.8, 0),
-        (-50, -50, 0),
+        (0, 0),
+        (1, 0),
+        (2, 0),
+        (3, 0),
+        (4, 0),
+        (5, 0),
+        (50, 0),
+        (-1, 0),
+        (-2, 0),
+        (-3, 0),
+        (-4, 0),
+        (-5, 0),
+        (-50, 0),
     ],
 )
-def test_antiwarp_management(param, x, y, expected) -> None:
+def test_antiwarp_management(param, xy, expected) -> None:
     from pathlib import Path
 
-    function_pickle = Path.cwd() / 'fwarp.pkl'
+    function_pickle = Path.cwd() / 'fwarp.pickle'
     G = PGMCompiler(**param)
     f = G.warp_management(opt=False)
-    assert f(x, y) == expected
+    assert f(xy) == expected
     if function_pickle.is_file():
         function_pickle.unlink()
 
@@ -325,7 +419,7 @@ def test_antiwarp_management(param, x, y, expected) -> None:
 def test_antiwarp_error(param, samplesize, expectation) -> None:
     from pathlib import Path
 
-    function_pickle = Path.cwd() / 'fwarp.pkl'
+    function_pickle = Path.cwd() / 'fwarp.pickle'
     param['samplesize'] = samplesize
     G = PGMCompiler(**param)
     with expectation:
@@ -335,6 +429,12 @@ def test_antiwarp_error(param, samplesize, expectation) -> None:
         function_pickle.unlink()
 
 
+def test_antiwarp_pos_file_error(param) -> None:
+    G = PGMCompiler(**param)
+    with pytest.raises(FileNotFoundError):
+        assert G.warp_management(opt=True)
+
+
 @pytest.mark.parametrize('x, y', [(4, 5), (2, 4), (5, 2), (5, 0), (5, 3), (7, 7), (7, 0), (10, 5), (6, 10), (0, 5)])
 def test_fwarp_load(param, x, y) -> None:
     G = PGMCompiler(**param)
@@ -342,7 +442,7 @@ def test_fwarp_load(param, x, y) -> None:
     def fun(h, k):
         return h**2 * k
 
-    file = Path.cwd() / 'fwarp.pkl'
+    file = Path.cwd() / 'fwarp.pickle'
     if not file.is_file():
         with open(file, 'wb') as f:
             dill.dump(fun, f)
@@ -357,7 +457,7 @@ def test_antiwarp_creation(param) -> None:
     from pathlib import Path
 
     fn = 'POS.txt'
-    funpath = Path.cwd() / 'fwarp.pkl'
+    funpath = Path.cwd() / 'fwarp.pickle'
     pospath = Path.cwd() / fn
 
     x_in = np.linspace(0, 100, 50)
@@ -373,6 +473,29 @@ def test_antiwarp_creation(param) -> None:
     assert callable(G_fun)
     assert funpath.is_file()
     funpath.unlink()
+    pospath.unlink()
+
+
+def test_antiwarp_plot(param) -> None:
+    from pathlib import Path
+
+    import matplotlib.pyplot as plt
+
+    fn = 'POS.txt'
+    pospath = Path.cwd() / fn
+
+    x_in = np.linspace(0, 100, 50)
+    y_in = np.linspace(0, 25, 10)
+    X, Y = np.meshgrid(x_in, y_in)
+    z_in = np.random.uniform(-0.030, 0.030, X.shape)
+
+    M = np.stack([X.ravel(), Y.ravel(), z_in.ravel()], axis=-1)
+    np.savetxt(fn, M, fmt='%.6f', delimiter=' ')
+
+    G = PGMCompiler(**param)
+    G.warp_generation(pospath, show=True)
+    plt.close('all')
+    assert True  # the plot is closed safely
     pospath.unlink()
 
 
@@ -431,28 +554,28 @@ def test_sample_warp_param_error(param):
     param['aerotech_angle'] = 0.55
     sampling_script = Path('.') / param['export_dir'] / 'SAMPLE_WARP.pgm'
 
-    p1 = param
+    p1 = copy.deepcopy(param)
     p1['laser'] = None
     with pytest.raises(ValueError):
-        assert sample_warp(7, 7, 3, param) is not None
+        assert sample_warp(7, 7, 3, p1) is not None
         assert not sampling_script.is_file()
 
-    p2 = param
+    p2 = copy.deepcopy(param)
     p2['aerotech_angle'] = None
-    with pytest.raises(ValueError):
-        assert sample_warp(7, 7, 3, param) is not None
+    with pytest.raises(TypeError):
+        assert sample_warp(7, 7, 3, p2) is not None
         assert not sampling_script.is_file()
 
-    p3 = param
+    p3 = copy.deepcopy(param)
     p3['samplesize'] = (None, 4)
-    with pytest.raises(ValueError):
-        assert sample_warp(7, 7, 3, param) is not None
+    with pytest.raises(TypeError):
+        assert sample_warp(7, 7, 3, p3) is not None
         assert not sampling_script.is_file()
 
-    p4 = param
+    p4 = copy.deepcopy(param)
     p4['samplesize'] = (None, None)
-    with pytest.raises(ValueError):
-        assert sample_warp(7, 7, 3, param) is not None
+    with pytest.raises(TypeError):
+        assert sample_warp(7, 7, 3, p4) is not None
         assert not sampling_script.is_file()
 
 
@@ -496,23 +619,22 @@ def test_header(param) -> None:
     param['laser'] = 'ant'
     G = PGMCompiler(**param)
     G.header()
-    assert G._instructions[8] == 'PSOOUTPUT Z CONTROL 0 1\n'
+    assert G._instructions[4] == 'PSOOUTPUT Z CONTROL 0 1\n'
 
     param['laser'] = 'carbide'
     G = PGMCompiler(**param)
     G.header()
-    assert G._instructions[8] == 'PSOOUTPUT X CONTROL 2 0\n'
+    assert G._instructions[4] == 'PSOOUTPUT X CONTROL 2 0\n'
 
     param['laser'] = 'pharos'
     G = PGMCompiler(**param)
     G.header()
-    assert G._instructions[8] == 'PSOOUTPUT X CONTROL 3 0\n'
-    del G
+    assert G._instructions[4] == 'PSOOUTPUT X CONTROL 3 0\n'
 
     param['laser'] = 'uwe'
     G = PGMCompiler(**param)
     G.header()
-    assert G._instructions[5] == 'WAIT MODE NOWAIT\n'
+    assert G._instructions[9] == 'G359    ; WAIT MODE NOWAIT\n'
 
 
 @pytest.mark.parametrize('v', [['V1'], ['V1', 'V2', 'V3'], [], 'VAR', ['V1', 'V2', ['V3', ['V4', 'V5']], 'V6']])
@@ -543,14 +665,14 @@ def test_mode(param, mode, expectation) -> None:
 def test_mode_abs(param) -> None:
     G = PGMCompiler(**param)
     G.mode(mode='abs')
-    assert G._instructions[-1] == 'ABSOLUTE\n'
+    assert G._instructions[-1] == 'G90 ; ABSOLUTE\n'
     assert G._mode_abs is True
 
 
 def test_mode_inc(param) -> None:
     G = PGMCompiler(**param)
     G.mode(mode='inc')
-    assert G._instructions[-1] == 'INCREMENTAL\n'
+    assert G._instructions[-1] == 'G91 ; INCREMENTAL\n'
     assert G._mode_abs is False
 
 
@@ -664,7 +786,6 @@ def test_set_home_values(param, h_pos) -> None:
     'speedp, pos, speed, expectation',
     [
         (12, [1, 2, 3], 14, does_not_raise()),
-        (None, [1, 2, 3], None, pytest.raises(ValueError)),
         (13, [1, 2, 3], None, does_not_raise()),
         (5, [None, 1, 2], 6.7, does_not_raise()),
         (5, [1, 2], None, pytest.raises(ValueError)),
@@ -716,7 +837,7 @@ def test_move_to_values(param, speedp, pos, speed) -> None:
         args += f'Z{z:.6f} '
     args += f'F{speed_pos:.6f}'
 
-    assert G._instructions[-2] == f'DWELL {G.long_pause}\n'
+    assert G._instructions[-2] == f'G4 P{G.long_pause} ; DWELL\n'
     if all(coord is None for coord in pos):
         assert G._instructions[-3] == f'{args}\n'
     else:
@@ -764,9 +885,7 @@ def test_enter_axis_rotation(param, angle_p, angle) -> None:
 
     a = G.aerotech_angle if angle is None else float(angle % 360)
     if a == 0.0:
-        assert G._instructions[-4] == '\n; ACTIVATE AXIS ROTATION\n'
-        assert G._instructions[-3] == f'G1 X{0.0:.6f} Y{0.0:.6f} Z{0.0:.6f} F{G.speed_pos:.6f}\n'
-        assert G._instructions[-2] == 'G84 X Y\n'
+        assert not G._instructions
     else:
         assert G._instructions[-6] == '\n; ACTIVATE AXIS ROTATION\n'
         assert G._instructions[-5] == f'G1 X{0.0:.6f} Y{0.0:.6f} Z{0.0:.6f} F{G.speed_pos:.6f}\n'
@@ -777,13 +896,11 @@ def test_enter_axis_rotation(param, angle_p, angle) -> None:
 @pytest.mark.parametrize(
     'n, dvar, var, expectation',
     [
-        (None, ['PIPPO'], None, pytest.raises(ValueError)),
         (13, ['PIPPO'], 'PIPPO', does_not_raise()),
         (0, ['PIPPO'], 'PIPPO', pytest.raises(ValueError)),
         (-5, ['PIPPO'], 'PIPPO', pytest.raises(ValueError)),
         (-3.2, ['PIPPO'], 'PIPPO', pytest.raises(ValueError)),
         (3.2, ['PIPPO'], 'PIPPO', does_not_raise()),
-        (4, ['PIPPO'], None, pytest.raises(ValueError)),
         (6, ['pippo'], 'paperino', pytest.raises(ValueError)),
         (13, ['paperino'], 'PAPERINO', does_not_raise()),
         (13, ['paperino', 'pippo', 'pluto'], 'pluto', does_not_raise()),
@@ -806,14 +923,13 @@ def test_for_loop(param, n, v) -> None:
         assert G._instructions[-1] == f'FOR ${v} = 0 TO {int(n) - 1}\n'
         # do G-Code operations
         G.dwell(p)
-    assert G._instructions[-1] == f'NEXT ${v}\n\n'
+    assert G._instructions[-1] == f'NEXT ${v}\n'
     assert G.dwell_time == int(n) * p
 
 
 @pytest.mark.parametrize(
     'n, expectation',
     [
-        (None, pytest.raises(ValueError)),
         (13, does_not_raise()),
         (0, pytest.raises(ValueError)),
         (-5, pytest.raises(ValueError)),
@@ -835,7 +951,7 @@ def test_repeat(param, n) -> None:
         assert G._instructions[-1] == f'REPEAT {int(n)}\n'
         # do G-Code operations
         G.dwell(p)
-    assert G._instructions[-1] == 'ENDREPEAT\n\n'
+    assert G._instructions[-1] == 'ENDREPEAT\n'
     assert G.dwell_time == int(n) * p
 
 
@@ -882,12 +998,6 @@ def test_get_filepath_values(param, fn, fp, ext, res) -> None:
     assert G._get_filepath(fn, fp, ext) == file
 
 
-def tests_get_filepath_none_fp(param) -> None:
-    G = PGMCompiler(**param)
-    with pytest.raises(ValueError):
-        G._get_filepath(None, 'test/femto', '.pgm')
-
-
 @pytest.mark.parametrize(
     'fn, fp, ext, expectation',
     [
@@ -905,22 +1015,14 @@ def test_get_filepath_extensions(param, fn, fp, ext, expectation) -> None:
         assert G._get_filepath(fn, fp, ext) is not None
 
 
-@pytest.mark.parametrize('fn, i', [('test.pgm', 0), ('test.pgm', 1), ('test.pgm', None), ('mzi.pgm', 3)])
+@pytest.mark.parametrize('fn, i', [('test.pgm', 0), ('test.pgm', 1), ('test.pgm', -5), ('mzi.pgm', 3)])
 def test_load_program(param, fn, i) -> None:
     G = PGMCompiler(**param)
     G.load_program(fn, i)
 
     f = Path(fn)
-    if i is None:
-        i = 2
-    assert G._instructions[-1] == f'PROGRAM {i} LOAD "{f}"\n'
+    assert G._instructions[-1] == f'PROGRAM {abs(i)} LOAD "{f}"\n'
     assert f.stem in G._loaded_files
-
-
-def test_load_program_raise(param) -> None:
-    G = PGMCompiler(**param)
-    with pytest.raises(ValueError):
-        G.load_program(None)
 
 
 def test_programstop(param) -> None:
@@ -934,6 +1036,21 @@ def test_programstop(param) -> None:
     assert G._instructions[-2] == 'PROGRAM 3 STOP\n'
     assert G._instructions[-1] == 'WAIT (TASKSTATUS(3, DATAITEM_TaskState) == TASKSTATE_Idle) -1\n'
 
+def test_wait_default_time(param) -> None:
+    G = PGMCompiler(**param)
+    G.wait(condition='ciao')
+    assert G._instructions[-1] == 'WAIT (ciao) -1\n'
+
+
+@pytest.mark.parametrize('t', [0,1,2,3,4,69, 99, 420])
+def test_wait_time(param, t) -> None:
+    G = PGMCompiler(**param)
+    G.wait(condition='ciao', time=t)
+    if t == 0:
+        assert G._instructions[-1] == 'WAIT (ciao) -1\n'
+    else:
+        assert G._instructions[-1] == f'WAIT (ciao) {t}\n'
+
 
 @pytest.mark.parametrize(
     'lp, rp, expectation',
@@ -942,7 +1059,6 @@ def test_programstop(param) -> None:
         ('test.pgm', 'femto/test.pgm', does_not_raise()),
         ('test.pgm', 'test', pytest.raises(ValueError)),
         ('test.pgm', 'tttest.pgm', pytest.raises(FileNotFoundError)),
-        ('test.pgm', None, pytest.raises(ValueError)),
     ],
 )
 def test_remove_program_raise(param, lp, rp, expectation) -> None:
@@ -959,7 +1075,6 @@ def test_remove_program_raise(param, lp, rp, expectation) -> None:
         ('test.pgm', 'femto/test.pgm', does_not_raise()),
         ('test.pgm', 'test', pytest.raises(ValueError)),
         ('test.pgm', 'tttest.pgm', pytest.raises(FileNotFoundError)),
-        ('test.pgm', None, pytest.raises(ValueError)),
     ],
 )
 def test_farcall_raise(param, lp, cp, expectation) -> None:
@@ -984,7 +1099,6 @@ def test_farcall_value(param) -> None:
         ('test.pgm', 'femto/test.pgm', does_not_raise()),
         ('test.pgm', 'test', pytest.raises(ValueError)),
         ('test.pgm', 'tttest.pgm', pytest.raises(FileNotFoundError)),
-        ('test.pgm', None, pytest.raises(ValueError)),
     ],
 )
 def test_bufferedcall_raise(param, lp, cp, expectation) -> None:
@@ -1108,7 +1222,7 @@ def test_compensate(param, x, y, z) -> None:
         x, y = h.T
         return (x**2 * y) * 1e-3
 
-    funpath = Path.cwd() / 'fwarp.pkl'
+    funpath = Path.cwd() / 'fwarp.pickle'
     with open(funpath, 'wb') as f:
         dill.dump(fun, f)
 
@@ -1117,13 +1231,11 @@ def test_compensate(param, x, y, z) -> None:
 
     G = PGMCompiler(**param)
     xc, yc, zc = G.compensate(x, y, z)
-    zfun = z + np.array([fun(np.array([xp, yp]).T) for (xp, yp) in zip(x, y)]) * (
-        param['n_glass'] / param['n_environment']
-    )
+    zfun = z + np.array([fun(np.array([xp, yp]).T) for (xp, yp) in zip(x, y)])
 
     np.testing.assert_array_equal(xc, x)
     np.testing.assert_array_equal(yc, y)
-    np.testing.assert_almost_equal(zc, zfun, decimal=6)
+    np.testing.assert_almost_equal(zc, zfun)
 
     funpath.unlink()
 
@@ -1162,19 +1274,7 @@ def test_t_matrix_matrix(param, angle, res) -> None:
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([2, -10, -10, -28]),
             np.array([5, 5, 16, 16]),
-            np.array([-0.0025, 0.0095, 0.0084, 0.0264]),
-        ),
-        (
-            True,
-            False,
-            True,
-            0.0,
-            np.array([-2, 10, 10, 28]),
-            np.array([5, 5, 16, 16]),
-            np.array([0.001, 0.002, 0.003, 0.004]),
-            np.array([2, -10, -10, -28]),
-            np.array([5, 5, 16, 16]),
-            np.array([-0.0016133, 0.0112733, 0.01106, 0.0299467]),
+            np.array([-0.0022167, 0.0084233, 0.007448, 0.023408]),
         ),
         (
             False,
@@ -1186,16 +1286,16 @@ def test_t_matrix_matrix(param, angle, res) -> None:
             np.array([0.0, 0.0, 0.0, 0.0]),
             np.array([-1.9124334, 10.085739, 13.1376393, 34.2740601]),
             np.array([-5.0341433, -4.8247144, -7.7719003, -15.4041813]),
-            np.array([-0.0025, 0.0095, 0.0122, 0.0324]),
+            np.array([-0.0022167, 0.0084233, 0.0108173, 0.028728]),
         ),
     ],
 )
-def test_transform_points(param, xflip, yflip, warpf, angle, xin, yin, zin, xo, yo, zo) -> None:
+def test_transform_points_(param, xflip, yflip, warpf, angle, xin, yin, zin, xo, yo, zo) -> None:
     def fun(h):
         a = np.array([[1e-3], [-1e-4]]).T
         return np.matmul(a, h.T).flatten()
 
-    file = Path.cwd() / 'fwarp.pkl'
+    file = Path.cwd() / 'fwarp.pickle'
     if not file.is_file():
         with open(file, 'wb') as f:
             dill.dump(fun, f)
@@ -1301,20 +1401,20 @@ def test_format_arguments_raise(param, x, y, z, f, expectation) -> None:
                 [
                     'G1 X1.998997 Y0.074899 Z0.031033 F0.500000\n',
                     '\n',
-                    'DWELL 0.025\n',
+                    'G4 P0.025 ; DWELL\n',
                     'PSOCONTROL X ON\n',
-                    'DWELL 1.0\n',
+                    'G4 P1.0 ; DWELL\n',
                     '\n',
-                    'G1 X-1.000546 Y0.022542 Z0.031033 F20.000000\n',
-                    'G1 X-4.000089 Y-0.029816 Z2.691033 F20.000000\n',
-                    'G1 X-7.051989 Y2.917370 Z5.351033 F20.000000\n',
+                    'G1 X-1.000546 Y0.022542 F20.000000\n',
+                    'G1 X-4.000089 Y-0.029816 Z2.691033\n',
+                    'G1 X-7.051989 Y2.917370 Z5.351033\n',
                     '\n',
-                    'DWELL 0.025\n',
+                    'G4 P0.025 ; DWELL\n',
                     'PSOCONTROL X OFF\n',
-                    'DWELL 1.0\n',
+                    'G4 P1.0 ; DWELL\n',
                     '\n',
                     'G1 X1.998997 Y0.074899 Z0.031033 F5.000000\n',
-                    'DWELL 1.0\n',
+                    'G4 P1.0 ; DWELL\n',
                     '\n',
                 ]
             ),
@@ -1328,9 +1428,71 @@ def test_write(param, pts, expected) -> None:
     assert G._instructions == expected
 
 
+@pytest.mark.parametrize(
+    'pts, exp',
+    [
+        (np.array([]), 0),
+        (np.random.rand(67, 2).T, 0),
+        (np.random.rand(69, 3).T, 0),
+        (np.random.rand(67, 5).T, 69),  # +2 for final pause and '\n' instruction
+        (np.random.rand(167, 5).T, 169),  # +2 for final pause and '\n' instruction
+        (np.random.rand(10, 6).T, 0),
+        (np.random.rand(10, 11).T, 0),
+    ],
+)
+def test_write_raise(param, pts, exp) -> None:
+    G = PGMCompiler(**param)
+    G.write(pts)
+    assert len(G._instructions) == exp
+
+
+@pytest.mark.parametrize(
+    'list_instr, expected',
+    [
+        (
+            [
+                'G01 F255\n',
+                'G9 G1 X0.01 F20\n',
+                'G9 G1 F20\n',
+                'G01 F255\n',
+                'G1 F12\n',
+                'G01 F 0.88\n',
+                'G09 G01 X1 F 12\n',
+                'G09G01 F81\n',
+            ],
+            [
+                'F255\n',
+                'G9 G1 X0.01 F20\n',
+                'F20\n',
+                'F255\n',
+                'F12\n',
+                'F 0.88\n',
+                'G09 G01 X1 F 12\n',
+                'F81\n',
+            ],
+        )
+    ],
+)
+def test_re_filtering(param, list_instr, expected) -> None:
+    G = PGMCompiler(**param)
+    G._instructions.extend(list_instr)
+    G.close()
+
+    file = Path(param['export_dir']) / param['filename']
+    with open(file) as f:
+        exp_instr = f.readlines()
+
+    assert exp_instr == expected
+
+    dire = Path(param['export_dir'])
+    file.unlink()
+    dire.rmdir()
+
+
 def test_close_dir(param) -> None:
     exp_dir = './src/femto/test/'
     param['export_dir'] = exp_dir
+    param['verbose'] = True
 
     # add some istructions
     G = PGMCompiler(**param)
@@ -1343,7 +1505,7 @@ def test_close_dir(param) -> None:
     assert G._instructions != deque([])
 
     # close and write to file
-    G.close(verbose=True)
+    G.close()
     assert G._instructions == deque([])
 
     # assert the exp directory has been created
@@ -1355,3 +1517,35 @@ def test_close_dir(param) -> None:
 
     file.unlink()
     dire.rmdir()
+
+
+def test_pgm_farcall_empty_external_files(param) -> None:
+    dir = Path('./dir/')
+    dir.mkdir(parents=True, exist_ok=True)
+    farcall_file = dir / 'FARCALL.pgm'
+    assert dir.is_dir()
+    farcall(directory=dir, parameters=param)
+    assert not farcall_file.is_file()
+    dir.rmdir()
+
+
+def test_pgm_farcall_external_files(param) -> None:
+    dir = Path('./dir/')
+    dir.mkdir(parents=True, exist_ok=True)
+    farcall_file = dir / 'FARCALL.pgm'
+
+    with PGMCompiler.from_dict(param, filename='test1', export_dir='dir') as G:
+        G.write(np.random.rand(90, 3))
+    with PGMCompiler.from_dict(param, filename='test2', export_dir='dir') as G:
+        G.write(np.random.rand(90, 3))
+    with PGMCompiler.from_dict(param, filename='test3', export_dir='dir') as G:
+        G.write(np.random.rand(90, 3))
+
+    assert dir.is_dir()
+    farcall(directory=dir, parameters=param)
+    assert farcall_file.is_file()
+    Path('./dir/test1.pgm').unlink()
+    Path('./dir/test2.pgm').unlink()
+    Path('./dir/test3.pgm').unlink()
+    Path('./dir/FARCALL.pgm').unlink()
+    dir.rmdir()

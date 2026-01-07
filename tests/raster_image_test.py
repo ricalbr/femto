@@ -28,6 +28,11 @@ def rimg(param) -> RasterImage:
     return RasterImage(**param)
 
 
+def test_id(param) -> None:
+    ri = RasterImage(**param)
+    assert ri.id == 'RI'
+
+
 def test_default_values() -> None:
     rimg = RasterImage()
     assert rimg.scan == int(1)
