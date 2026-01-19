@@ -68,7 +68,7 @@ def list_ng() -> list[NasuWaveguide]:
 def list_mk() -> list[Marker]:
     PARAM_MK = dotdict(scan=1, speed=2, speed_pos=5, speed_closed=5, depth=0.000, lx=1, ly=1)
     markers = []
-    for (x, y) in zip(range(4, 8), range(3, 7)):
+    for x, y in zip(range(4, 8), range(3, 7)):
         m = Marker(**PARAM_MK)
         m.cross([x, y])
         markers.append(m)

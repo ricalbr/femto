@@ -263,7 +263,7 @@ def test_buffer_polygon(p, offset, p_expected) -> None:
     tc = Trench(block=Polygon())
     buff_polygon = tc.buffer_polygon(p, offset)
 
-    for (p_calc, p_exp) in zip(buff_polygon, p_expected):
+    for p_calc, p_exp in zip(buff_polygon, p_expected):
         assert almost_equal(p_calc, p_exp)
 
 
@@ -439,7 +439,7 @@ def test_trenchcol_dig() -> None:
 
     tc._dig(coords)
 
-    for (t, c) in zip(tc._trench_list, comp_box):
+    for t, c in zip(tc._trench_list, comp_box):
         assert normalize_polygon(c).equals_exact(t.block, tolerance=1e-8)
         assert almost_equal(normalize_polygon(c), t.block)
 
@@ -461,7 +461,7 @@ def test_trenchcol_dig_remove() -> None:
 
     tc._dig(coords, remove=[1])
 
-    for (t, c) in zip(tc._trench_list, comp_box):
+    for t, c in zip(tc._trench_list, comp_box):
         assert normalize_polygon(c).equals_exact(t.block, tolerance=1e-8)
 
 
@@ -649,7 +649,7 @@ def test_u_dig() -> None:
 
     utc._dig(coords)
 
-    for (t, c) in zip(utc._trench_list, comp_box):
+    for t, c in zip(utc._trench_list, comp_box):
         assert normalize_polygon(c).equals_exact(t.block, tolerance=1e-8)
         assert almost_equal(normalize_polygon(c), t.block)
     assert utc.trenchbed is not []
@@ -675,7 +675,7 @@ def test_u_dig_no_pillars() -> None:
 
     utc._dig(coords)
 
-    for (t, c) in zip(utc._trench_list, comp_box):
+    for t, c in zip(utc._trench_list, comp_box):
         assert normalize_polygon(c).equals_exact(t.block, tolerance=1e-8)
         assert almost_equal(normalize_polygon(c), t.block)
     assert utc.trenchbed is not []

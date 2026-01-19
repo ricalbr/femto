@@ -174,7 +174,7 @@ class Trench:
     @cached_property
     def orientation(self) -> str:
         """Orientation of the trench block."""
-        (xmin, ymin, xmax, ymax) = self.block.bounds
+        xmin, ymin, xmax, ymax = self.block.bounds
         return 'v' if (xmax - xmin) <= (ymax - ymin) else 'h'
 
     @cached_property
@@ -184,7 +184,7 @@ class Trench:
             return self.safe_inner_turns
         else:
             # External rectangle
-            (xmin_ext, ymin_ext, xmax_ext, ymax_ext) = self.block.bounds
+            xmin_ext, ymin_ext, xmax_ext, ymax_ext = self.block.bounds
 
             # Internal rectangle
             buffer_length = 2 * self.delta_floor
@@ -221,7 +221,7 @@ class Trench:
             rectangle, which produces a point along with the usual lines).
         """
 
-        (xmin, ymin, xmax, ymax) = self.block.bounds
+        xmin, ymin, xmax, ymax = self.block.bounds
         number_of_lines = 2 + int((xmax - xmin) / self.delta_floor)
 
         coords = []
@@ -261,7 +261,7 @@ class Trench:
             coords.extend(line.coords)
         return np.array(coords).T
 
-    def toolpath(self) -> Generator[npt.NDArray[np.float64], None, None]:
+    def toolpath(self) -> Generator[npt.NDArray[np.float64]]:
         """Toolpath generator.
 
         The function takes a polygon and computes the filling toolpath.
@@ -736,7 +736,7 @@ def main() -> None:
     # b = T._trench_list[0]
     # b = T.trenchbed[0]
     for tr in T._trench_list:
-        for (x, y) in tr.toolpath():
+        for x, y in tr.toolpath():
             plt.plot(x, y)
 
     plt.axis('equal')
