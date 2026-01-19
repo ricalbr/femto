@@ -7,9 +7,9 @@ speed, Speed, mm/s, 6, 0.0
 scan, Scans, , 5, 0
 depth, Depth, mm, 8, 0.000
 radius, R, mm, 5, 0.00
-int_dist, Cdist, um, 8, 0.0000 
+int_dist, Cdist, um, 8, 0.0000
 wl, λ, um, 8, 0.000
-int_length, Clength, mm, 8, 0.000 
+int_length, Clength, mm, 8, 0.000
 arm_length, Alength, mm, 8, 0.000
 yin, Yin, mm, 8, 0.0000
 yout, Yout, mm, 8, 0.0000

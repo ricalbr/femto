@@ -535,7 +535,7 @@ class TrenchWriter(Writer):
         ]
 
         gcode_instr = []
-        for (line, dec) in itertools.zip_longest(instr, listcast(forced_deceleration)):
+        for line, dec in itertools.zip_longest(instr, listcast(forced_deceleration)):
             if bool(dec):
                 gcode_instr.append(f'G9 G1 {line}\n')
             else:
