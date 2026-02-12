@@ -1116,9 +1116,12 @@ class WaveguideWriter(Writer):
         None.
         """
 
-        objs_cast = flatten(listcast(objs))
-        print(objs_cast)
-        if all(isinstance(wg, Waveguide) for wg in objs_cast):
+        objs_cast = listcast(objs)
+        if all(
+            isinstance(wg, Waveguide) or
+            (isinstance(wg, list) and all(isinstance(x, Waveguide) for x in wg))
+            for wg in objs_cast
+        ):
             self._obj_list.extend(objs_cast)
             logger.debug('Waveguide added to _obj_list.')
         else:
@@ -1273,11 +1276,11 @@ class WaveguideWriter(Writer):
         else:
             fn = pathlib.Path(fn).stem + '_WG.pgm'
             with PGMCompiler.from_dict(self._param, filename=fn, verbose=verbose) as G:
-                for wg in listcast(self.objs):
-                    _wg_fab_time += wg.fabrication_time
-                    with G.repeat(wg.scan):
-                        logger.debug(f'Export {wg}.')
-                        G.write(wg.points)
+                for bunch in self.objs:
+                    with G.repeat(listcast(bunch)[0].scan):
+                        for wg in listcast(bunch):
+                            _wg_fab_time += wg.fabrication_time
+                            G.write(wg.points)
                 G.go_init()
                 _wg_fab_time += G.total_dwell_time
             del G
