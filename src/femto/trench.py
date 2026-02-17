@@ -217,7 +217,7 @@ class Trench:
     @cached_property
     def orientation(self) -> str:
         """Orientation of the trench block."""
-        (xmin, ymin, xmax, ymax) = self.block.bounds
+        xmin, ymin, xmax, ymax = self.block.bounds
         if (xmax - xmin) <= (ymax - ymin):
             logger.debug('The block orientation is vertical.')
             return 'v'
@@ -233,7 +233,7 @@ class Trench:
             return self.safe_inner_turns
         else:
             # External rectangle
-            (xmin_ext, ymin_ext, xmax_ext, ymax_ext) = self.block.bounds
+            xmin_ext, ymin_ext, xmax_ext, ymax_ext = self.block.bounds
 
             # Internal rectangle
             buffer_length = 2 * self.delta_floor
@@ -273,7 +273,7 @@ class Trench:
             rectangle, which produces a point along with the usual lines).
         """
 
-        (xmin, ymin, xmax, ymax) = self.block.bounds
+        xmin, ymin, xmax, ymax = self.block.bounds
         number_of_lines = 2 + int((xmax - xmin) / self.delta_floor)
 
         coords = []

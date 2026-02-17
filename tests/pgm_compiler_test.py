@@ -1036,13 +1036,14 @@ def test_programstop(param) -> None:
     assert G._instructions[-2] == 'PROGRAM 3 STOP\n'
     assert G._instructions[-1] == 'WAIT (TASKSTATUS(3, DATAITEM_TaskState) == TASKSTATE_Idle) -1\n'
 
+
 def test_wait_default_time(param) -> None:
     G = PGMCompiler(**param)
     G.wait(condition='ciao')
     assert G._instructions[-1] == 'WAIT (ciao) -1\n'
 
 
-@pytest.mark.parametrize('t', [0,1,2,3,4,69, 99, 420])
+@pytest.mark.parametrize('t', [0, 1, 2, 3, 4, 69, 99, 420])
 def test_wait_time(param, t) -> None:
     G = PGMCompiler(**param)
     G.wait(condition='ciao', time=t)
