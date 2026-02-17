@@ -60,6 +60,9 @@ def plot2d_base_layer(fig: go.Figure, x0: float, y0: float, x1: float, y1: float
         line_color='#000000',
         line_width=2,
         layer='below',
+        name='Glass',
+        legendgroup='glass',
+        showlegend=True,
     )
 
     # ORIGIN
@@ -70,7 +73,9 @@ def plot2d_base_layer(fig: go.Figure, x0: float, y0: float, x1: float, y1: float
             y=[0],
             marker=dict(color='red', size=12),
             hoverinfo='none',
-            showlegend=False,
+            showlegend=True,
+            name='Origin',
+            legendgroup='origin',
         )
     )
 
@@ -113,50 +118,59 @@ def plot2d_base_layer(fig: go.Figure, x0: float, y0: float, x1: float, y1: float
                 ticks='outside',
             ),
         ),
-        annotations=[
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=[-0.2],
+            y=[-0.1],
+            mode="text",
+            text=["(0,0)"],
+            textposition="bottom left",
+            legendgroup="origin",
+            name="Origin",
+            showlegend=False,
+            hoverinfo="skip",
+            textfont=dict(color="red"),
+        )
+    )
+
+    fig.update_layout(
+        margin=dict(b=110),
+        legend=dict(
+            groupclick="togglegroup",
+            orientation="h",
+            x=0.0,
+            xanchor="left",
+            y=-0.18,
+            yanchor="top",
+            # entrywidthmode="fraction",
+            # entrywidth=0.12,
+        ),
+        updatemenus=[
             dict(
-                x=0,
-                y=0,
-                text='(0,0)',
-                showarrow=False,
-                xanchor='left',
-                xshift=-25,
-                yshift=-20,
-                font=dict(color='red'),
+                type="buttons",
+                direction="left",
+                showactive=True,
+                x=1.0,
+                xanchor="right",
+                y=-0.18,
+                yanchor="top",
+                bgcolor="rgba(0,0,0,0)",
+                borderwidth=0,
+                pad=dict(t=0, r=0, l=0, b=0),
+                buttons=[
+                    dict(
+                        label="Equal Aspect Ratio",
+                        method="relayout",
+                        args=[{"yaxis.scaleanchor": "x", "yaxis.scaleratio": 1}],
+                        args2=[{"yaxis.scaleanchor": None}],
+                    )
+                ],
             )
         ],
     )
-    fig.update_layout(
-    updatemenus=[
-        dict(
-            type="buttons",
-            direction="left",
-            x=0.5,
-            y=-0.15,
-            xanchor="center",
-            yanchor="top",
-            showactive=True,
-            buttons=[
-                dict(
-                    label="Toggle Equal Aspect Ratio",
-                    method="relayout",
 
-                    # Toggle ON
-                    args=[{
-                        "yaxis.scaleanchor": "x",
-                        "yaxis.scaleratio": 1
-                    }],
-
-                    # Toggle OFF
-                    args2=[{
-                        "yaxis.scaleanchor": None
-                    }]
-                )
-            ]
-        )
-    ],
-    margin=dict(b=120)
-    )
     return fig
 
 
@@ -185,7 +199,9 @@ def plot3d_base_layer(fig: go.Figure) -> go.Figure:
             z=[0],
             marker=dict(color='red', size=12),
             hoverinfo='none',
-            showlegend=False,
+            showlegend=True,
+            name='Origin',
+            legendgroup='origin',
         )
     )
 
@@ -229,6 +245,10 @@ def plot3d_base_layer(fig: go.Figure) -> go.Figure:
         ),
     )
     return fig
+
+
+def first_legend(fig, group):
+    return not any(trace.legendgroup == group for trace in fig.data)
 
 
 class Writer(PGMCompiler, abc.ABC):
@@ -955,8 +975,10 @@ class TrenchWriter(Writer):
                     y=yt,
                     fill='toself',
                     **tcargs,
-                    showlegend=False,
                     hovertemplate='(%{x:.4f}, %{y:.4f})<extra>TR</extra>',
+                    showlegend=False,
+                    name='Trench',
+                    legendgroup='trench',
                 )
             )
         return fig
@@ -1149,8 +1171,7 @@ class WaveguideWriter(Writer):
 
         objs_cast = listcast(objs)
         if all(
-            isinstance(wg, Waveguide) or
-            (isinstance(wg, list) and all(isinstance(x, Waveguide) for x in wg))
+            isinstance(wg, Waveguide) or (isinstance(wg, list) and all(isinstance(x, Waveguide) for x in wg))
             for wg in objs_cast
         ):
             self._obj_list.extend(objs_cast)
@@ -1365,25 +1386,30 @@ class WaveguideWriter(Writer):
             xo = split_mask(x, s.astype(bool))
             yo = split_mask(y, s.astype(bool))
             zo = split_mask(z, s.astype(bool))
-            [
+
+            # decide if first trace of this writer appears in legend
+            first = first_legend(fig, 'wg')
+            for xoo, yoo, zoo in zip(xo, yo, zo):
                 fig.add_trace(
                     go.Scattergl(
                         x=list(xoo),
                         y=list(yoo),
                         mode='lines',
                         line=wg_args,
-                        showlegend=False,
+                        showlegend=first,
+                        name='Waveguides',
+                        legendgroup='wg',
                         customdata=zoo,
                         hovertemplate='(%{x:.4f}, %{y:.4f}, %{customdata:.4f})<extra>WG</extra>',
                     )
                 )
-                for xoo, yoo, zoo in zip(xo, yo, zo)
-            ]
+                first = False
             logger.debug('Add shutter close trace to figure.')
             if show_shutter_close:
                 xc = split_mask(x, ~s.astype(bool))
                 yc = split_mask(y, ~s.astype(bool))
-                [
+                first = first_legend(fig, 'shutter_close')
+                for x, y in zip(xc, yc):
                     fig.add_trace(
                         go.Scattergl(
                             x=x,
@@ -1391,11 +1417,12 @@ class WaveguideWriter(Writer):
                             mode='lines',
                             line=sc_args,
                             hoverinfo='none',
-                            showlegend=False,
+                            showlegend=first,
+                            name='Close Shutter',
+                            legendgroup='shutter_close',
                         )
                     )
-                    for x, y in zip(xc, yc)
-                ]
+                    first = False
         return fig
 
     def _plot3d_wg(
@@ -1704,23 +1731,29 @@ class NasuWriter(Writer):
                 x, y, _ = self.transform_points(x_wg, y_wg, z_wg)
                 xo = split_mask(x, s.astype(bool))
                 yo = split_mask(y, s.astype(bool))
-                [
+
+                # decide if first trace of this writer appears in legend
+                first = first_legend(fig, 'nasu_wg')
+                for xoo, yoo in zip(xo, yo):
                     fig.add_trace(
                         go.Scattergl(
                             x=list(xoo),
                             y=list(yoo),
                             mode='lines',
                             line=wg_args,
-                            showlegend=False,
+                            showlegend=first,
+                            name='Nasu Waveguides',
+                            legendgroup='nasu_wg',
                             hovertemplate='(%{x:.4f}, %{y:.4f})<extra>WG</extra>',
                         )
                     )
-                    for xoo, yoo in zip(xo, yo)
-                ]
+                    first = False
+
                 if show_shutter_close:
                     xc = split_mask(x, ~s.astype(bool))
                     yc = split_mask(y, ~s.astype(bool))
-                    [
+                    first = first_legend(fig, 'shutter_close')
+                    for x, y in zip(xc, yc):
                         fig.add_trace(
                             go.Scattergl(
                                 x=x,
@@ -1728,11 +1761,12 @@ class NasuWriter(Writer):
                                 mode='lines',
                                 line=sc_args,
                                 hoverinfo='none',
-                                showlegend=False,
+                                showlegend=show_elem,
+                                name='Close Shutter',
+                                legendgroup='shutter_close',
                             )
                         )
-                        for x, y in zip(xc, yc)
-                    ]
+                        first = False
         return fig
 
     def _plot3d_nwg(
@@ -2038,25 +2072,30 @@ class MarkerWriter(Writer):
             x, y, z = self.transform_points(x_mk, y_mk, z_mk)
             xo = split_mask(x, s.astype(bool))
             yo = split_mask(y, s.astype(bool))
-            [
+
+            first = first_legend(fig, 'mk')
+            for x, y in zip(xo, yo):
                 fig.add_trace(
                     go.Scattergl(
                         x=x,
                         y=y,
                         mode='lines',
                         line=mk_args,
-                        showlegend=False,
+                        showlegend=first,
+                        name='Marker',
+                        legendgroup='mk',
                         hovertemplate='(%{x:.4f}, %{y:.4f})<extra>MK</extra>',
                     )
                 )
-                for x, y in zip(xo, yo)
-            ]
+            first = False
 
             logger.debug('Add shutter close trace to figure.')
             if show_shutter_close:
                 xc = split_mask(x, ~s.astype(bool))
                 yc = split_mask(y, ~s.astype(bool))
-                [
+
+                first = first_legend(fig, 'shutter_close')
+                for x, y in zip(xc, yc):
                     fig.add_trace(
                         go.Scattergl(
                             x=x,
@@ -2064,11 +2103,12 @@ class MarkerWriter(Writer):
                             mode='lines',
                             line=sc_args,
                             hoverinfo='none',
-                            showlegend=False,
+                            showlegend=first,
+                            name='Close Shutter',
+                            legendgroup='shutter_close',
                         )
                     )
-                    for x, y in zip(xc, yc)
-                ]
+                first = False
         return fig
 
     def _plot3d_mk(
