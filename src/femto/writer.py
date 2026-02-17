@@ -126,6 +126,37 @@ def plot2d_base_layer(fig: go.Figure, x0: float, y0: float, x1: float, y1: float
             )
         ],
     )
+    fig.update_layout(
+    updatemenus=[
+        dict(
+            type="buttons",
+            direction="left",
+            x=0.5,
+            y=-0.15,
+            xanchor="center",
+            yanchor="top",
+            showactive=True,
+            buttons=[
+                dict(
+                    label="Toggle Equal Aspect Ratio",
+                    method="relayout",
+
+                    # Toggle ON
+                    args=[{
+                        "yaxis.scaleanchor": "x",
+                        "yaxis.scaleratio": 1
+                    }],
+
+                    # Toggle OFF
+                    args2=[{
+                        "yaxis.scaleanchor": None
+                    }]
+                )
+            ]
+        )
+    ],
+    margin=dict(b=120)
+    )
     return fig
 
 
