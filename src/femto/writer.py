@@ -230,18 +230,35 @@ def plot3d_base_layer(fig: go.Figure) -> go.Figure:
                 showgrid=False,
                 zeroline=False,
             ),
-            annotations=[
-                dict(
-                    x=0,
-                    y=0,
-                    z=0,
-                    text='(0,0,0)',
-                    showarrow=False,
-                    xanchor='left',
-                    xshift=10,
-                    font=dict(color='red'),
-                )
-            ],
+        ),
+    )
+    fig.add_trace(
+        go.Scatter3d(
+            x=[-0.2],
+            y=[-0.1],
+            z=[-0.1],
+            mode="text",
+            text=["(0,0,0)"],
+            textposition="bottom left",
+            legendgroup="origin",
+            name="Origin",
+            showlegend=False,
+            hoverinfo="skip",
+            textfont=dict(color="red"),
+        )
+    )
+
+    fig.update_layout(
+        margin=dict(b=110),
+        legend=dict(
+            groupclick="togglegroup",
+            orientation="h",
+            x=0.0,
+            xanchor="left",
+            y=-0.18,
+            yanchor="top",
+            # entrywidthmode="fraction",
+            # entrywidth=0.12,
         ),
     )
     return fig
@@ -948,6 +965,7 @@ class TrenchWriter(Writer):
         tcargs = {**default_tcargs, **style}
 
         logger.debug('Add trenches beds shapes to figure.')
+        first = first_legend(fig, 'tc')
         for bd in self._beds:
             xt, yt = bd.border
             xt, yt, *_ = self.transform_points(xt, yt, np.zeros_like(xt, dtype=np.float64))
@@ -958,10 +976,13 @@ class TrenchWriter(Writer):
                     y=yt,
                     fill='toself',
                     **utcargs,
-                    showlegend=False,
                     hovertemplate='(%{x:.4f}, %{y:.4f})<extra>TR</extra>',
+                    showlegend=first,
+                    name='Trench',
+                    legendgroup='tc',
                 )
             )
+            first=False
 
         logger.debug('Add trenches shapes to figure.')
         for tr in self._trenches:
@@ -978,7 +999,7 @@ class TrenchWriter(Writer):
                     hovertemplate='(%{x:.4f}, %{y:.4f})<extra>TR</extra>',
                     showlegend=False,
                     name='Trench',
-                    legendgroup='trench',
+                    legendgroup='tc',
                 )
             )
         return fig
@@ -992,6 +1013,7 @@ class TrenchWriter(Writer):
         if not self._trenches:
             return fig
 
+        first = first_legend(fig, 'tc')
         for tr in self._trenches:
             # get points and transform them
             xt, yt = tr.border
@@ -1007,12 +1029,15 @@ class TrenchWriter(Writer):
                     y=y,
                     z=z,
                     colorscale=[[0, 'grey'], [1, 'grey']],
-                    showlegend=False,
+                    showlegend=first,
+                    name='Trench',
+                    legendgroup='tc',
                     hoverinfo='skip',
                     showscale=False,
                     opacity=0.6,
                 )
             )
+            first=False
 
             # Floor surface
             if len(xt) % 2:
@@ -1035,6 +1060,8 @@ class TrenchWriter(Writer):
                     z=zs,
                     colorscale=[[0, 'grey'], [1, 'grey']],
                     showlegend=False,
+                    name='Trench',
+                    legendgroup='tc',
                     hoverinfo='skip',
                     showscale=False,
                 )
@@ -1049,6 +1076,8 @@ class TrenchWriter(Writer):
                     mode='lines',
                     line=utcargs,
                     showlegend=False,
+                    name='Trench',
+                    legendgroup='tc',
                     hovertemplate='(%{x:.4f}, %{y:.4f})<extra>TR</extra>',
                 )
             )
@@ -1070,6 +1099,8 @@ class TrenchWriter(Writer):
                     z=z,
                     colorscale=[[0, 'grey'], [1, 'grey']],
                     showlegend=False,
+                    name='Trench',
+                    legendgroup='tc',
                     hoverinfo='skip',
                     showscale=False,
                     opacity=0.6,
@@ -1096,6 +1127,8 @@ class TrenchWriter(Writer):
                     z=zs,
                     colorscale=[[0, 'grey'], [1, 'grey']],
                     showlegend=False,
+                    name='Trench',
+                    legendgroup='tc',
                     hoverinfo='skip',
                     showscale=False,
                 )
@@ -1109,6 +1142,8 @@ class TrenchWriter(Writer):
                     mode='lines',
                     line=utcargs,
                     showlegend=False,
+                    name='Trench',
+                    legendgroup='tc',
                     hovertemplate='(%{x:.4f}, %{y:.4f})<extra>TR</extra>',
                 )
             )
@@ -1396,11 +1431,11 @@ class WaveguideWriter(Writer):
                         y=list(yoo),
                         mode='lines',
                         line=wg_args,
+                        customdata=zoo,
+                        hovertemplate='(%{x:.4f}, %{y:.4f}, %{customdata:.4f})<extra>WG</extra>',
                         showlegend=first,
                         name='Waveguides',
                         legendgroup='wg',
-                        customdata=zoo,
-                        hovertemplate='(%{x:.4f}, %{y:.4f}, %{customdata:.4f})<extra>WG</extra>',
                     )
                 )
                 first = False
@@ -1467,7 +1502,9 @@ class WaveguideWriter(Writer):
             yo = split_mask(y, s.astype(bool))
             zo = split_mask(z, s.astype(bool))
             logger.debug('Add shutter open trace.')
-            [
+
+            first = first_legend(fig, 'wg')
+            for x,y,z in zip(xo, yo, zo):
                 fig.add_trace(
                     go.Scatter3d(
                         x=x,
@@ -1475,18 +1512,22 @@ class WaveguideWriter(Writer):
                         z=z,
                         mode='lines',
                         line=wg_args,
-                        showlegend=False,
                         hovertemplate='(%{x:.4f}, %{y:.4f}, %{z:.4f})<extra>WG</extra>',
+                        showlegend=first,
+                        name='Waveguides',
+                        legendgroup='wg',
                     )
                 )
-                for x, y, z in zip(xo, yo, zo)
-            ]
+                first =False
+
             if show_shutter_close:
                 logger.debug('Add shutter close trace.')
                 xc = split_mask(x, ~s.astype(bool))
                 yc = split_mask(y, ~s.astype(bool))
                 zc = split_mask(z, ~s.astype(bool))
-                [
+
+                first = first_legend(fig, 'shutter_close')
+                for x, y, z in zip(xc, yc, zc):
                     fig.add_trace(
                         go.Scatter3d(
                             x=x,
@@ -1495,11 +1536,12 @@ class WaveguideWriter(Writer):
                             mode='lines',
                             line=sc_args,
                             hoverinfo='none',
-                            showlegend=False,
+                            showlegend=first,
+                            name='Close Shutter',
+                            legendgroup='shutter_close',
                         )
                     )
-                    for x, y, z in zip(xc, yc, zc)
-                ]
+                    first=False
         return fig
 
 
@@ -1811,7 +1853,9 @@ class NasuWriter(Writer):
                 xo = split_mask(x, s.astype(bool))
                 yo = split_mask(y, s.astype(bool))
                 zo = split_mask(z, s.astype(bool))
-                [
+
+                first = first_legend(fig, 'nasu_wg')
+                for x, y, z in zip(xo, yo, zo):
                     fig.add_trace(
                         go.Scatter3d(
                             x=x,
@@ -1819,17 +1863,21 @@ class NasuWriter(Writer):
                             z=z,
                             mode='lines',
                             line=wg_args,
-                            showlegend=False,
                             hovertemplate='(%{x:.4f}, %{y:.4f}, %{z:.4f})<extra>WG</extra>',
+                            showlegend=first,
+                            name='Nasu Waveguides',
+                            legendgroup='nasu_wg',
                         )
                     )
-                    for x, y, z in zip(xo, yo, zo)
-                ]
+                first = False
+
                 if show_shutter_close:
                     xc = split_mask(x, ~s.astype(bool))
                     yc = split_mask(y, ~s.astype(bool))
                     zc = split_mask(z, ~s.astype(bool))
-                    [
+
+                    first = first_legend(fig, 'shutter_close')
+                    for x, y, z in zip(xc, yc, zc):
                         fig.add_trace(
                             go.Scatter3d(
                                 x=x,
@@ -1838,11 +1886,12 @@ class NasuWriter(Writer):
                                 mode='lines',
                                 line=sc_args,
                                 hoverinfo='none',
-                                showlegend=False,
+                                showlegend=first,
+                                name='Close Shutter',
+                                legendgroup='shutter_close',
                             )
                         )
-                        for x, y, z in zip(xc, yc, zc)
-                    ]
+                        first=False
         return fig
 
 
@@ -2152,7 +2201,9 @@ class MarkerWriter(Writer):
             xo = split_mask(x, s.astype(bool))
             yo = split_mask(y, s.astype(bool))
             zo = split_mask(z, s.astype(bool))
-            [
+
+            first = first_legend(fig, 'wg')
+            for x, y, z in zip(xo, yo, zo):
                 fig.add_trace(
                     go.Scatter3d(
                         x=x,
@@ -2160,18 +2211,22 @@ class MarkerWriter(Writer):
                         z=z,
                         mode='lines',
                         line=mk_args,
-                        showlegend=False,
                         hovertemplate='<extra>MK</extra>',
+                        showlegend=first,
+                        name='Marker',
+                        legendgroup='mk',
                     )
                 )
-                for x, y, z in zip(xo, yo, zo)
-            ]
+                first=False
+
             if show_shutter_close:
                 logger.debug('Add shutter close trace.')
                 xc = split_mask(x, ~s.astype(bool))
                 yc = split_mask(y, ~s.astype(bool))
                 zc = split_mask(z, ~s.astype(bool))
-                [
+
+                first = first_legend(fig, 'shutter_close')
+                for x, y, z in zip(xc, yc, zc):
                     fig.add_trace(
                         go.Scatter3d(
                             x=x,
@@ -2180,11 +2235,12 @@ class MarkerWriter(Writer):
                             mode='lines',
                             line=sc_args,
                             hoverinfo='none',
-                            showlegend=False,
+                            showlegend=first,
+                            name='Close Shutter',
+                            legendgroup='shutter_close',
                         )
                     )
-                    for x, y, z in zip(xc, yc, zc)
-                ]
+                    first=False
         return fig
 
 
