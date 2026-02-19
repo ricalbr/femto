@@ -304,7 +304,7 @@ class Writer(PGMCompiler, abc.ABC):
         """
 
     @abc.abstractmethod
-    def add(self, obj: Any) -> None:
+    def add(self, objs: Any) -> None:
         """Add objects.
 
         Abstract method for adding objects to a Writer.
