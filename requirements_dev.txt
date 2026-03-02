@@ -1,8 +1,7 @@
 black >=24.3.0
+black==24.3.0
 flake8>=3.9.2
 mypy>=0.910
-black==24.3.0
-pre-commit>=2.1.0
 openpyxl>=3.0.10
 pre-commit>=2.1.0
 pytest>=6.2.5

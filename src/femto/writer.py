@@ -124,47 +124,47 @@ def plot2d_base_layer(fig: go.Figure, x0: float, y0: float, x1: float, y1: float
         go.Scatter(
             x=[-0.2],
             y=[-0.1],
-            mode="text",
-            text=["(0,0)"],
-            textposition="bottom left",
-            legendgroup="origin",
-            name="Origin",
+            mode='text',
+            text=['(0,0)'],
+            textposition='bottom left',
+            legendgroup='origin',
+            name='Origin',
             showlegend=False,
-            hoverinfo="skip",
-            textfont=dict(color="red"),
+            hoverinfo='skip',
+            textfont=dict(color='red'),
         )
     )
 
     fig.update_layout(
         margin=dict(b=110),
         legend=dict(
-            groupclick="togglegroup",
-            orientation="h",
+            groupclick='togglegroup',
+            orientation='h',
             x=0.0,
-            xanchor="left",
+            xanchor='left',
             y=-0.18,
-            yanchor="top",
+            yanchor='top',
             # entrywidthmode="fraction",
             # entrywidth=0.12,
         ),
         updatemenus=[
             dict(
-                type="buttons",
-                direction="left",
+                type='buttons',
+                direction='left',
                 showactive=True,
                 x=1.0,
-                xanchor="right",
+                xanchor='right',
                 y=-0.18,
-                yanchor="top",
-                bgcolor="rgba(0,0,0,0)",
+                yanchor='top',
+                bgcolor='rgba(0,0,0,0)',
                 borderwidth=0,
                 pad=dict(t=0, r=0, l=0, b=0),
                 buttons=[
                     dict(
-                        label="Equal Aspect Ratio",
-                        method="relayout",
-                        args=[{"yaxis.scaleanchor": "x", "yaxis.scaleratio": 1}],
-                        args2=[{"yaxis.scaleanchor": None}],
+                        label='Equal Aspect Ratio',
+                        method='relayout',
+                        args=[{'yaxis.scaleanchor': 'x', 'yaxis.scaleratio': 1}],
+                        args2=[{'yaxis.scaleanchor': None}],
                     )
                 ],
             )
@@ -237,26 +237,26 @@ def plot3d_base_layer(fig: go.Figure) -> go.Figure:
             x=[-0.2],
             y=[-0.1],
             z=[-0.1],
-            mode="text",
-            text=["(0,0,0)"],
-            textposition="bottom left",
-            legendgroup="origin",
-            name="Origin",
+            mode='text',
+            text=['(0,0,0)'],
+            textposition='bottom left',
+            legendgroup='origin',
+            name='Origin',
             showlegend=False,
-            hoverinfo="skip",
-            textfont=dict(color="red"),
+            hoverinfo='skip',
+            textfont=dict(color='red'),
         )
     )
 
     fig.update_layout(
         margin=dict(b=110),
         legend=dict(
-            groupclick="togglegroup",
-            orientation="h",
+            groupclick='togglegroup',
+            orientation='h',
             x=0.0,
-            xanchor="left",
+            xanchor='left',
             y=-0.18,
-            yanchor="top",
+            yanchor='top',
             # entrywidthmode="fraction",
             # entrywidth=0.12,
         ),
@@ -982,7 +982,7 @@ class TrenchWriter(Writer):
                     legendgroup='tc',
                 )
             )
-            first=False
+            first = False
 
         logger.debug('Add trenches shapes to figure.')
         for tr in self._trenches:
@@ -1037,7 +1037,7 @@ class TrenchWriter(Writer):
                     opacity=0.6,
                 )
             )
-            first=False
+            first = False
 
             # Floor surface
             if len(xt) % 2:
@@ -1504,7 +1504,7 @@ class WaveguideWriter(Writer):
             logger.debug('Add shutter open trace.')
 
             first = first_legend(fig, 'wg')
-            for x,y,z in zip(xo, yo, zo):
+            for x, y, z in zip(xo, yo, zo):
                 fig.add_trace(
                     go.Scatter3d(
                         x=x,
@@ -1518,7 +1518,7 @@ class WaveguideWriter(Writer):
                         legendgroup='wg',
                     )
                 )
-                first =False
+                first = False
 
             if show_shutter_close:
                 logger.debug('Add shutter close trace.')
@@ -1541,7 +1541,7 @@ class WaveguideWriter(Writer):
                             legendgroup='shutter_close',
                         )
                     )
-                    first=False
+                    first = False
         return fig
 
 
@@ -1803,7 +1803,7 @@ class NasuWriter(Writer):
                                 mode='lines',
                                 line=sc_args,
                                 hoverinfo='none',
-                                showlegend=show_elem,
+                                showlegend=first,
                                 name='Close Shutter',
                                 legendgroup='shutter_close',
                             )
@@ -1891,7 +1891,7 @@ class NasuWriter(Writer):
                                 legendgroup='shutter_close',
                             )
                         )
-                        first=False
+                        first = False
         return fig
 
 
@@ -2217,7 +2217,7 @@ class MarkerWriter(Writer):
                         legendgroup='mk',
                     )
                 )
-                first=False
+                first = False
 
             if show_shutter_close:
                 logger.debug('Add shutter close trace.')
@@ -2240,7 +2240,7 @@ class MarkerWriter(Writer):
                             legendgroup='shutter_close',
                         )
                     )
-                    first=False
+                    first = False
         return fig
 
 
