@@ -542,8 +542,10 @@ def test_waveguide_writer_extend_behaviour(gc_param, list_wg) -> None:
         (None, pytest.raises(TypeError)),
         ([Waveguide()], does_not_raise()),
         ([Waveguide(), [Waveguide(), Waveguide()]], does_not_raise()),
-        ([[[Waveguide()]], [[Waveguide(), [Waveguide(), [Waveguide(), Waveguide()]]], Waveguide()]],
-         pytest.raises(TypeError)),
+        (
+            [[[Waveguide()]], [[Waveguide(), [Waveguide(), [Waveguide(), Waveguide()]]], Waveguide()]],
+            pytest.raises(TypeError),
+        ),
         ([TrenchColumn(x_center=1, y_min=2, y_max=3), [Waveguide(), Waveguide()]], pytest.raises(TypeError)),
     ],
 )
