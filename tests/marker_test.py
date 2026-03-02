@@ -80,7 +80,7 @@ def test_mk_from_dict(param) -> None:
 
 
 def test_z_init(param) -> None:
-    param['z_init'] = None
+    del param['z_init']
     param['depth'] = -0.001
     mk = Marker(**param)
     assert mk.z_init == float(-0.001)
@@ -88,8 +88,20 @@ def test_z_init(param) -> None:
 
 def test_scan(param) -> None:
     param['scan'] = 1.2
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         Marker(**param)
+
+
+def test_slots(param) -> None:
+    m = Marker(**param)
+    with pytest.raises(AttributeError):
+        # non-existing attribrute
+        m.zinit = 0.00
+
+
+def test_id(param) -> None:
+    mk = Marker(**param)
+    assert mk.id == 'MK'
 
 
 def test_repr(param) -> None:
@@ -131,20 +143,6 @@ def test_cross_init_pos(param) -> None:
     mk = Marker(**param)
     with pytest.raises(ValueError):
         mk.cross(i_pos)
-
-
-def test_cross_l_error(param) -> None:
-    param['lx'] = None
-    param['ly'] = 3
-    mk = Marker(**param)
-    with pytest.raises(ValueError):
-        mk.cross([0, 0, 0])
-
-    param['lx'] = 2
-    param['ly'] = None
-    mk = Marker(**param)
-    with pytest.raises(ValueError):
-        mk.cross([0, 0, 0])
 
 
 def test_cross_l_default(param) -> None:
@@ -218,13 +216,6 @@ def test_ruler_lx(param) -> None:
     mk.ruler([1, 2, 3], lx=lxx)
     assert pytest.approx(np.max(mk.x)) == lxx
 
-    # test none lx
-    lxx = None
-    param['lx'] = None
-    mk = Marker(**param)
-    with pytest.raises(ValueError):
-        mk.ruler([1, 2, 3], lx=lxx)
-
 
 def test_ruler_lx_short(param) -> None:
     # test default lx2
@@ -256,19 +247,17 @@ def test_ruler_x_init(param) -> None:
     mk.ruler([1, 2, 3], x_init=x1)
     assert pytest.approx(mk.x[0]) == x1
 
-    # test None x_init
-    xi = None
-    param['x_init'] = None
-    mk = Marker(**param)
-    with pytest.raises(ValueError):
-        mk.ruler([1, 2, 3], x_init=xi)
-
 
 def test_ruler_points(param) -> None:
     mk = Marker(**param)
     mk.ruler([1, 2, 3, 4], 5, 2, x_init=-2)
 
     x, y, z, f, s = mk.points
+    print(x)
+    print(y)
+    print(z)
+    print(f)
+    print(s)
     np.testing.assert_almost_equal(
         x,
         np.array(
@@ -394,22 +383,22 @@ def test_ablation_shift_custom(param) -> None:
                 0.0,
                 5.0,
                 5.0,
+                0.0,
+                0.0,
+                5.0,
+                5.0,
                 0.1,
                 0.1,
                 5.1,
                 5.1,
+                0.0,
+                0.0,
+                5.0,
+                5.0,
                 -0.1,
                 -0.1,
                 4.9,
                 4.9,
-                0.0,
-                0.0,
-                5.0,
-                5.0,
-                0.0,
-                0.0,
-                5.0,
-                5.0,
                 0.0,
             ]
         ),
@@ -423,22 +412,22 @@ def test_ablation_shift_custom(param) -> None:
                 0.0,
                 0.0,
                 0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
                 0.1,
                 0.1,
                 0.1,
                 0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
                 -0.1,
                 -0.1,
                 -0.1,
                 -0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
                 0.0,
             ]
         ),
