@@ -364,6 +364,8 @@ class Trench:
                 logger.debug('Yield buffered contour path.')
                 x, y = np.array(current_poly.exterior.coords).T
                 yield self.resample_polygon(x=x, y=y, step=self.step)
+            else:
+                break
 
         for poly in polygon_list:
             logger.debug('Yield inner zig-zag path.')
