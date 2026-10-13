@@ -2,8 +2,8 @@
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/45992199/205449527-d349ee82-39fb-4e1f-b25b-dbd2260ad9a4.svg" width="480">
-    <img alt="Logo" src="https://user-images.githubusercontent.com/45992199/205449385-341529d6-0575-430c-a0b4-62f50579db19.svg" width="480">
+    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/45992199/205449385-341529d6-0575-430c-a0b4-62f50579db19.svg" width="480">
+    <img alt="Logo" src="https://user-images.githubusercontent.com/45992199/205449527-d349ee82-39fb-4e1f-b25b-dbd2260ad9a4.svg" width="480">
   </picture>
 </div>
 
