@@ -261,7 +261,7 @@ def test_centroid(poly) -> None:
         (
             Point(-1, 0).buffer(1.5).union(Point(1, 0).buffer(1.5)),
             -1.2,
-            [g for g in Point(-1, 0).buffer(1.5).union(Point(1, 0).buffer(1.5)).buffer(-1.2).geoms],
+            [*Point(-1, 0).buffer(1.5).union(Point(1, 0).buffer(1.5)).buffer(-1.2).geoms],
         ),
     ],
 )
